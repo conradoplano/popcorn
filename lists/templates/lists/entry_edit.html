@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block title %}{{ entry.title }} · {{ site_name }}{% endblock %}
+
+{% block content %}
+  <p class="back"><a href="{% if entry.kind == 'movie' %}{% url 'lists:movies' %}{% else %}{% url 'lists:shows' %}{% endif %}?show={{ entry.status }}">‹ {% if entry.kind == 'movie' %}Movies{% else %}TV shows{% endif %}</a></p>
+  <div class="card">
+    <h2>{{ entry.title }}{% if entry.year %} <span class="muted">{{ entry.year }}</span>{% endif %}</h2>
+    <form method="post" class="stack">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <div class="row">
+        <div class="field">{{ form.title.label_tag }}{{ form.title }}{{ form.title.errors }}</div>
+        <div class="field year-field">{{ form.year.label_tag }}{{ form.year }}{{ form.year.errors }}</div>
+      </div>
+      <div class="field pills">{{ form.status.label_tag }}{{ form.status }}{{ form.status.errors }}</div>
+      <div class="field pills rating-pills">{{ form.rating.label_tag }}{{ form.rating }}{{ form.rating.errors }}</div>
+      <div class="field">{{ form.notes.label_tag }}{{ form.notes }}{{ form.notes.errors }}</div>
+      <button type="submit" class="wide">Save</button>
+    </form>
+    <p class="muted small">Added {{ entry.added_at|date:"j M Y" }}{% if entry.watched_at %} · watched {{ entry.watched_at|date:"j M Y" }}{% endif %}</p>
+  </div>
+  <form method="post" action="{% url 'lists:entry_delete' entry.pk %}" class="center" data-confirm="Remove {{ entry.title }} from your list?">
+    {% csrf_token %}<button type="submit" class="danger">Remove from my list</button>
+  </form>
+{% endblock %}

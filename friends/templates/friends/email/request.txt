@@ -1,0 +1,14 @@
+{% autoescape off %}Hi{% if other %} {{ other.get_short_name }}{% endif %},
+
+{{ inviter }} ({{ inviter.email }}) would like to share movie and TV show watchlists with you on {{ site_name }}.
+{% if other %}
+To accept, open Friends{% if url %}: {{ url }}{% else %} in {{ site_name }}{% endif %}
+{% else %}
+{{ site_name }} keeps your lists of movies and shows to watch and already watched, with your ratings, and friends see each other's lists.
+Create an account{% if url %} here: {{ url }}{% endif %}
+You log in with your email address and a six-digit code; there's no password.
+{% endif %}
+If you don't know {{ inviter.get_short_name }}, you can ignore this email.
+
+{{ site_name }}
+{% endautoescape %}

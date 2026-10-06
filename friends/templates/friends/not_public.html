@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+
+{% block title %}Not public · {{ site_name }}{% endblock %}
+
+{% block content %}
+  <div class="card narrow center">
+    <p class="big">🔒</p>
+    <h2>This list isn't public</h2>
+    <p class="muted">{{ owner.get_short_name }} hasn't made this list public{% if user.is_authenticated %}. If you're friends, you'll find it under <a href="{% url 'friends:friends' %}">Friends</a>{% endif %}.</p>
+  </div>
+{% endblock %}

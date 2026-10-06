@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}{{ inviter }} invited you · {{ site_name }}{% endblock %}
+
+{% block content %}
+  <div class="card narrow center">
+    <p class="big">🍿</p>
+    <h2>{{ inviter }} invited you</h2>
+    <p class="muted">{{ site_name }} keeps your lists of movies and TV shows to watch and already watched, with your ratings. Friends see each other's lists.</p>
+    <p>Sign in or create an account, and you and {{ inviter.get_short_name }} will be friends.</p>
+    <div class="stack">
+      {% if registration_open %}<a class="btn wide" href="{% url 'accounts:register' %}?next={{ next|urlencode }}">Create an account</a>{% endif %}
+      <a class="btn wide ghost" href="{% url 'accounts:login' %}?next={{ next|urlencode }}">I have an account – sign in</a>
+    </div>
+  </div>
+{% endblock %}

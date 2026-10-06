@@ -1,0 +1,7 @@
+Hi{% if name %} {{ name }}{% endif %},
+
+Your {{ site_name|default:"Popcorn" }} login code is:
+
+    {{ code }}
+
+It is valid for {{ minutes }} minutes. If you didn't request it, you can ignore this email.

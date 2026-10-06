@@ -1,0 +1,53 @@
+{% load static %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>{% block title %}{{ site_name }}{% endblock %}</title>
+  <link rel="manifest" href="{% url 'core:manifest' %}">
+  <meta name="theme-color" content="#2f2668">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="{{ site_name }}">
+  <link rel="apple-touch-icon" href="{% static 'icons/icon-180.png' %}">
+  <link rel="icon" href="{% static 'icons/icon-192.png' %}">
+  <link rel="stylesheet" href="{% static 'css/app.css' %}">
+  <script src="{% static 'js/app.js' %}" defer></script>
+</head>
+<body class="{% if user.is_authenticated %}has-tabs{% endif %}" data-sw-url="{% url 'core:sw' %}">
+  <header class="topbar">
+    <div class="wrap">
+      <a href="{% if user.is_authenticated %}{% url 'lists:movies' %}{% else %}{% url 'accounts:login' %}{% endif %}" class="brand"><img src="{% static 'icons/icon-180.png' %}" alt="">{{ site_name }}</a>
+      {% if user.is_authenticated %}
+        <div class="who">
+          <span class="me">{{ user.get_short_name }}</span>
+          <form method="post" action="{% url 'accounts:logout' %}" class="inline">
+            {% csrf_token %}<button type="submit" class="link">Log out</button>
+          </form>
+        </div>
+      {% endif %}
+    </div>
+  </header>
+
+  <main class="wrap">
+    {% for message in messages %}
+      <div class="flash {{ message.tags }}">{{ message }}</div>
+    {% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+
+  {% if user.is_authenticated %}
+    {% with ns=request.resolver_match.namespace name=request.resolver_match.url_name %}
+    <nav class="tabs">
+      <a href="{% url 'lists:movies' %}" class="{% if name == 'movies' or entry.kind == 'movie' %}on{% endif %}">
+        <span class="ic">🎬</span>Movies</a>
+      <a href="{% url 'lists:shows' %}" class="{% if name == 'shows' or entry.kind == 'show' %}on{% endif %}">
+        <span class="ic">📺</span>TV shows</a>
+      <a href="{% url 'friends:friends' %}" class="{% if ns == 'friends' %}on{% endif %}">
+        <span class="ic">👥</span>Friends</a>
+    </nav>
+    {% endwith %}
+  {% endif %}
+
+</body>
+</html>

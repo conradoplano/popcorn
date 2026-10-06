@@ -1,0 +1,5 @@
+<nav class="filter-pills" aria-label="Filter">
+  {% for value, label, count in pills %}
+    <a href="?show={{ value }}" class="pill{% if value == show %} on{% endif %}"{% if value == show %} aria-current="page"{% endif %}>{{ label }} <span class="count">{{ count }}</span></a>
+  {% endfor %}
+</nav>

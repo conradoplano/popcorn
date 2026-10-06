@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}{{ owner }}'s {% if kind == 'movie' %}movies{% else %}TV shows{% endif %} · {{ site_name }}{% endblock %}
+
+{% block content %}
+  {% if not public %}<p class="back"><a href="{% url 'friends:friends' %}">‹ Friends</a></p>{% endif %}
+  <div class="page-head">
+    <h2>{{ owner }}'s lists</h2>
+    {% if public %}<span class="badge public-badge">🌍 Public</span>{% endif %}
+  </div>
+
+  {% if tabs|length > 1 %}
+    <nav class="segmented" aria-label="List">
+      {% for s, label, url in tabs %}
+        <a href="{{ url }}" class="{% if s == slug %}on{% endif %}"{% if s == slug %} aria-current="page"{% endif %}>{% if s == 'movies' %}🎬{% else %}📺{% endif %} {{ label }}</a>
+      {% endfor %}
+    </nav>
+  {% endif %}
+
+  {% include "lists/_pills.html" %}
+
+  {% if rows %}
+    <div class="list-search"><input type="search" placeholder="Search this list" aria-label="Search this list" data-filter=".entry-row"></div>
+    <div class="entries">
+      {% for entry in rows %}
+        {% include "lists/_entry_row.html" with own=False %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card empty center"><p class="muted">Nothing here yet.</p></div>
+  {% endif %}
+
+  {% if public and not user.is_authenticated %}
+    <div class="card center cta">
+      <p>Keep your own lists of movies and TV shows, rate them and share them with friends.</p>
+      <a class="btn" href="{% url 'accounts:register' %}">Create an account</a>
+    </div>
+  {% endif %}
+{% endblock %}

@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+
+{% block title %}Friends · {{ site_name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <h2><span class="head-ic">👥</span> Friends</h2>
+  </div>
+  <p class="muted intro">Friends see each other's movie and TV show lists – nothing else, no comments or likes.</p>
+
+  {% if incoming %}
+    <div class="card requests">
+      <h3>Want to share lists with you</h3>
+      {% for r in incoming %}
+        <div class="person">
+          <div class="person-text">
+            <b>{{ r.from_user }}</b>
+            <div class="muted small">{{ r.from_user.email }}</div>
+          </div>
+          <div class="actions">
+            <form method="post" action="{% url 'friends:accept' r.pk %}" class="inline">{% csrf_token %}<button type="submit" class="btn small">Accept</button></form>
+            <form method="post" action="{% url 'friends:decline' r.pk %}" class="inline">{% csrf_token %}<button type="submit" class="link danger">Decline</button></form>
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="card">
+    <h3>Your friends</h3>
+    {% for p in people %}
+      <div class="person">
+        <a class="person-text plain" href="{% url 'friends:friend' p.pk 'movies' %}">
+          <b>{{ p }}</b>
+          <div class="muted small">🎬 {{ p.movies }} movie{{ p.movies|pluralize }} · 📺 {{ p.shows }} show{{ p.shows|pluralize }}</div>
+        </a>
+        <form method="post" action="{% url 'friends:remove' p.pk %}" class="inline" data-confirm="Stop sharing lists with {{ p }}?">
+          {% csrf_token %}<button type="submit" class="link danger">Remove</button>
+        </form>
+      </div>
+    {% empty %}
+      <p class="muted">No friends yet. Add one by email or send them your invite link.</p>
+    {% endfor %}
+
+    <form method="post" action="{% url 'friends:add' %}" class="add-friend">
+      {% csrf_token %}
+      <input type="email" name="email" placeholder="Their email" required autocomplete="off" aria-label="Their email">
+      <button type="submit">Add friend</button>
+    </form>
+    <p class="muted small">They get an email and become your friend once they accept – or once they create an account, if they're new to {{ site_name }}.</p>
+    {% if outgoing %}
+      <ul class="plain-list waiting">
+        {% for r in outgoing %}
+          <li class="line">
+            <span><span class="muted">Waiting for</span> {{ r.to_email }}</span>
+            <form method="post" action="{% url 'friends:decline' r.pk %}" class="inline">{% csrf_token %}<button type="submit" class="link">Cancel</button></form>
+          </li>
+        {% endfor %}
+      </ul>
+    {% endif %}
+  </div>
+
+  <div class="card" id="invite">
+    <h3>🔗 Your invite link</h3>
+    <p class="muted">Send it to a friend: whoever opens it and signs in becomes your friend straight away.</p>
+    <div class="copy-row">
+      <input type="text" readonly value="{{ invite_url }}" id="invite-url" aria-label="Your invite link">
+      <button type="button" class="ghost" data-copy="#invite-url" data-share-title="Share watchlists with me on {{ site_name }}">Copy</button>
+    </div>
+    <form method="post" action="{% url 'friends:new_link' %}" class="new-link" data-confirm="Make a new link? The old one stops working (your friends stay friends).">
+      {% csrf_token %}<button type="submit" class="link small">Make a new link</button>
+    </form>
+  </div>
+
+  <div class="card" id="public">
+    <h3>🌍 Public lists</h3>
+    <p class="muted">A public list can be seen by anyone with its link, even without an account. Your friends always see your lists.</p>
+    <form method="post" action="{% url 'friends:sharing' %}" class="stack">
+      {% csrf_token %}
+      <label class="switch-row">
+        <input type="checkbox" name="movies_public" {% if user.movies_public %}checked{% endif %} data-autosubmit>
+        <span class="switch" aria-hidden="true"></span>
+        <span>Movies are public</span>
+      </label>
+      {% if user.movies_public %}
+        <div class="copy-row"><input type="text" readonly value="{{ public_movies_url }}" id="public-movies" aria-label="Public movies link"><button type="button" class="ghost" data-copy="#public-movies">Copy</button></div>
+      {% endif %}
+      <label class="switch-row">
+        <input type="checkbox" name="shows_public" {% if user.shows_public %}checked{% endif %} data-autosubmit>
+        <span class="switch" aria-hidden="true"></span>
+        <span>TV shows are public</span>
+      </label>
+      {% if user.shows_public %}
+        <div class="copy-row"><input type="text" readonly value="{{ public_shows_url }}" id="public-shows" aria-label="Public TV shows link"><button type="button" class="ghost" data-copy="#public-shows">Copy</button></div>
+      {% endif %}
+      <noscript><button type="submit">Save</button></noscript>
+    </form>
+  </div>
+{% endblock %}

@@ -1,0 +1,12 @@
+services:
+  popcorn:
+    build: .
+    image: popcorn:latest
+    container_name: popcorn
+    restart: unless-stopped
+    ports:
+      # Only reachable from the NAS itself; DSM's reverse proxy serves it over HTTPS.
+      - "127.0.0.1:5062:8000"
+    env_file: .env
+    volumes:
+      - ./data:/data

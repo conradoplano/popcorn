@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+
+{% block title %}{{ kind_label }} · {{ site_name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <h2><span class="head-ic">{% if kind == 'movie' %}🎬{% else %}📺{% endif %}</span> {{ kind_label }}</h2>
+    {% if public %}<a class="badge public-badge" href="{% url 'friends:friends' %}#public" title="Anyone with the link can see this list">🌍 Public</a>{% endif %}
+  </div>
+
+  <form method="post" class="card add-entry" autocomplete="off">
+    {% csrf_token %}
+    <div class="add-row">
+      {{ form.title }}
+      {{ form.year }}
+      <button type="submit">+ Add</button>
+    </div>
+    {{ form.title.errors }}{{ form.year.errors }}
+    <p class="muted small">{% if show == 'watched' %}Adds to what you've watched.{% elif show == 'watching' %}Adds to what you're watching.{% else %}Adds to what you want to watch.{% endif %}</p>
+  </form>
+
+  {% include "lists/_pills.html" %}
+
+  {% if rows %}
+    <div class="list-search"><input type="search" placeholder="Search this list" aria-label="Search this list" data-filter=".entry-row"></div>
+    <div class="entries">
+      {% for entry in rows %}
+        {% include "lists/_entry_row.html" with own=True %}
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="card empty center">
+      {% if show == 'want' %}
+        <p class="big">🍿</p>
+        <p>Nothing to watch yet. Add a {% if kind == 'movie' %}movie{% else %}show{% endif %} someone recommended, or see what your <a href="{% url 'friends:friends' %}">friends</a> are watching.</p>
+      {% elif show == 'watching' %}
+        <p>No shows in progress. Mark a show as watching from its page.</p>
+      {% elif show == 'watched' %}
+        <p>Nothing watched yet. Tap <b>✓ Watched</b> on something you've seen, then rate it.</p>
+      {% else %}
+        <p>Your list is empty.</p>
+      {% endif %}
+    </div>
+  {% endif %}
+{% endblock %}
