@@ -439,10 +439,11 @@ button.suggestion.active { background: var(--accent-soft); }
 .rec .tile-title { font-size: .92rem; }
 .rec-reason { color: var(--muted); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .rec .chips { margin-top: 0; }
-.rec-actions { display: flex; flex-wrap: wrap; gap: .3rem .5rem; align-items: center; margin-top: auto; }
+.rec-actions { display: flex; flex-wrap: wrap; gap: .3rem .5rem; align-items: center; margin-top: .15rem; }
 .rec-actions form.inline { display: inline-flex; gap: .3rem; }
 .rec-actions .btn.small { padding: .2rem .55rem; font-size: .8rem; min-height: 1.9rem; }
-button.link.muted-link { color: var(--muted); font-size: .8rem; }
+.rec-actions button.not-for-me { color: var(--muted); }
+.rec-actions button.not-for-me:hover, .rec-actions button.not-for-me:focus-visible { color: var(--neg); border-color: var(--neg); }
 
 /* With a mouse or trackpad, rows of tiles wrap instead of scrolling sideways (the wheel scrolls the page,
    and snapping makes trackpads jumpy); phones keep swiping. */
@@ -453,3 +454,5 @@ button.link.muted-link { color: var(--muted); font-size: .8rem; }
 @media (hover: hover) and (pointer: fine) and (max-width: 560px) {
   .card.rec { max-width: none; }
 }
+a.plain:hover { text-decoration: underline; text-decoration-color: var(--accent); }
+.rec-side { display: flex; flex-direction: column; align-items: center; gap: .35rem; flex-shrink: 0; }

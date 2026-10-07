@@ -69,6 +69,9 @@ class RecommendationTests(TitlesTestCase):
         self.assertEqual(severance.provider_names if hasattr(severance, "provider_names") else
                          [p["name"] for p in severance.providers], ["Netflix", "Joyn"])
         self.assertContains(response, "Thoughtful sci-fi like Dune.")
+        # A look at it on TMDB before adding it.
+        self.assertContains(response, 'href="https://www.themoviedb.org/movie/329865" target="_blank"')
+        self.assertContains(response, 'href="https://www.themoviedb.org/tv/95396" target="_blank"')
         # What the AI was told: lists, ratings, groups, services, and TMDB's candidates.
         text = create.call_args.kwargs["input"][0]["content"]
         self.assertIn("Streaming services they have: Netflix.", text)

@@ -40,13 +40,17 @@
           <div class="tiles recs">
             {% for rec in recs %}
               <div class="card rec">
-                {% if rec.poster_url %}
-                  <img class="tile-poster" src="{{ rec.poster_url }}" alt="" loading="lazy" width="92" height="138">
-                {% else %}
-                  <div class="tile-poster none" aria-hidden="true">{% if rec.kind == 'movie' %}🎬{% else %}📺{% endif %}</div>
-                {% endif %}
+                <div class="rec-side">
+                  {% if rec.tmdb_url %}<a href="{{ rec.tmdb_url }}" target="_blank" rel="noopener" tabindex="-1" aria-hidden="true">{% endif %}
+                  {% if rec.poster_url %}
+                    <img class="tile-poster" src="{{ rec.poster_url }}" alt="" loading="lazy" width="92" height="138">
+                  {% else %}
+                    <div class="tile-poster none" aria-hidden="true">{% if rec.kind == 'movie' %}🎬{% else %}📺{% endif %}</div>
+                  {% endif %}
+                  {% if rec.tmdb_url %}</a>{% endif %}
+                </div>
                 <div class="rec-text">
-                  <div class="tile-title" title="{{ rec }}">{{ rec.title }}{% if rec.year %} <span class="muted">{{ rec.year }}</span>{% endif %}</div>
+                  <div class="tile-title" title="{{ rec }}">{% if rec.tmdb_url %}<a class="plain" href="{{ rec.tmdb_url }}" target="_blank" rel="noopener">{{ rec.title }}</a>{% else %}{{ rec.title }}{% endif %}{% if rec.year %} <span class="muted">{{ rec.year }}</span>{% endif %}</div>
                   {% if rec.reason %}<div class="rec-reason small" title="{{ rec.overview }}">{{ rec.reason }}</div>{% endif %}
                   {% if rec.providers or rec.tag %}
                     <div class="chips">
@@ -62,7 +66,7 @@
                       <button type="submit" name="status" value="watched" class="btn small ghost">✓ Seen it</button>
                     </form>
                     <form method="post" action="{% url 'lists:recommendation_dismiss' rec.pk %}" class="inline">
-                      {% csrf_token %}<button type="submit" class="link small muted-link" title="Not for me: it won't be recommended again">Not for me</button>
+                      {% csrf_token %}<button type="submit" class="btn small ghost not-for-me" title="It won't be recommended again">✕ Not for me</button>
                     </form>
                   </div>
                 </div>

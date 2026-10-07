@@ -106,9 +106,7 @@ class Entry(models.Model):
 
     @property
     def tmdb_url(self):
-        if self.tmdb_id:
-            return f"https://www.themoviedb.org/{'movie' if self.kind == Entry.Kind.MOVIE else 'tv'}/{self.tmdb_id}"
-        return ""
+        return tmdb_page(self.kind, self.tmdb_id)
 
     @property
     def watch(self):
@@ -154,6 +152,13 @@ class Entry(models.Model):
         self.own_providers = self.watch
         self.providers = []
         self.providers_sync = False
+
+
+def tmdb_page(kind, tmdb_id):
+    """The title's page on TMDB (overview, cast, trailers), or "" when it isn't on TMDB."""
+    if not tmdb_id:
+        return ""
+    return f"https://www.themoviedb.org/{'movie' if kind == Entry.Kind.MOVIE else 'tv'}/{tmdb_id}"
 
 
 def poster_url(path, size="w154"):
@@ -323,3 +328,7 @@ class Recommendation(models.Model):
     @property
     def poster_url(self):
         return poster_url(self.poster_path)
+
+    @property
+    def tmdb_url(self):
+        return tmdb_page(self.kind, self.tmdb_id)
