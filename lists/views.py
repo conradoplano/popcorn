@@ -154,10 +154,11 @@ def home(request):
 @login_required
 @require_POST
 def recommendation_add(request, pk):
-    """Puts a recommendation on your list: to watch, or as watched ("Seen it"), in the group it suits."""
+    """Puts a recommendation on your list: to watch, as watching (shows) or as watched ("Seen it"), in the
+    group it suits."""
     rec = get_object_or_404(Recommendation, pk=pk, user=request.user)
     status = request.POST.get("status")
-    if status not in (Entry.Status.WANT, Entry.Status.WATCHED):
+    if status not in Entry.statuses_for(rec.kind):
         raise Http404("No status")
     entry = add(request, rec.kind, status, rec.title, rec.year, rec.tmdb_id)
     if rec.tag_id and not entry.tag_id:

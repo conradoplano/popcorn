@@ -58,6 +58,7 @@
                     <form method="post" action="{% url 'lists:recommendation_add' rec.pk %}" class="inline">
                       {% csrf_token %}
                       <button type="submit" name="status" value="want" class="btn small">+ To watch</button>
+                      {% if rec.kind == 'show' %}<button type="submit" name="status" value="watching" class="btn small ghost">▶ Watching</button>{% endif %}
                       <button type="submit" name="status" value="watched" class="btn small ghost">✓ Seen it</button>
                     </form>
                     <form method="post" action="{% url 'lists:recommendation_dismiss' rec.pk %}" class="inline">

@@ -154,6 +154,18 @@ class RecommendationTests(TitlesTestCase):
         self.assertEqual(self.user.entries.get(tmdb_id=95396).status, "want")
         self.assertEqual([r.title for r in self.home().context["rec_movies"]], ["Parasite"])
 
+    def test_add_a_show_as_watching(self):
+        self.ai()
+        response = self.home()
+        self.assertContains(response, "▶ Watching", count=1)  # only on the show
+        severance = Recommendation.objects.get(title="Severance")
+        self.client.post(reverse("lists:recommendation_add", args=[severance.pk]), {"status": "watching"})
+        self.assertEqual(self.user.entries.get(tmdb_id=95396).status, "watching")
+        arrival = Recommendation.objects.get(title="Arrival")
+        response = self.client.post(reverse("lists:recommendation_add", args=[arrival.pk]), {"status": "watching"})
+        self.assertEqual(response.status_code, 404)  # movies aren't "watching"
+        self.assertFalse(self.user.entries.filter(tmdb_id=329865).exists())
+
     def test_not_for_me_is_never_recommended_again(self):
         create = self.ai(picks_response(**DEFAULT_PICKS), picks_response(**DEFAULT_PICKS))
         self.home()
