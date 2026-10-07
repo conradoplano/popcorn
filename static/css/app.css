@@ -443,3 +443,13 @@ button.suggestion.active { background: var(--accent-soft); }
 .rec-actions form.inline { display: inline-flex; gap: .3rem; }
 .rec-actions .btn.small { padding: .2rem .55rem; font-size: .8rem; min-height: 1.9rem; }
 button.link.muted-link { color: var(--muted); font-size: .8rem; }
+
+/* With a mouse or trackpad, rows of tiles wrap instead of scrolling sideways (the wheel scrolls the page,
+   and snapping makes trackpads jumpy); phones keep swiping. */
+@media (hover: hover) and (pointer: fine) {
+  .tiles { flex-wrap: wrap; overflow-x: visible; scroll-snap-type: none; padding-bottom: 0; }
+  .card.rec { flex: 1 1 17rem; max-width: calc(50% - .3rem); }
+}
+@media (hover: hover) and (pointer: fine) and (max-width: 560px) {
+  .card.rec { max-width: none; }
+}
