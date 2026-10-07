@@ -1,0 +1,220 @@
+{% extends "base.html" %}
+
+{% block title %}Manage · {{ site_name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <h2><span class="head-ic">⚙️</span> Manage</h2>
+  </div>
+
+  {% if running %}
+    <div class="card working" id="import-running" data-status-url="{% url 'lists:import_status' running.pk %}">
+      <span class="spinner" aria-hidden="true"></span>
+      {% if running.purpose == 'link' %}
+        <div><b>Updating your titles…</b><div class="muted small">Titles it isn't sure about will appear here for you to check. You can leave this page.</div></div>
+      {% else %}
+        <div><b>Reading your list…</b><div class="muted small">The titles it finds will appear here for you to check. You can leave this page.</div></div>
+      {% endif %}
+    </div>
+  {% endif %}
+
+  {% if pending %}
+    <div class="card requests" id="pending">
+      <div class="line">
+        <h3>Check and add ({{ pending|length }})</h3>
+        <form method="post" action="{% url 'lists:pending_all' %}" class="actions"{% if unsure %} data-confirm="{{ unsure }} of them may not be the right title. Add all anyway?"{% endif %}>
+          {% csrf_token %}
+          <button type="submit" name="action" value="add" class="btn small">+ Add all</button>
+          <button type="submit" name="action" value="discard" class="link danger small" formnovalidate data-confirm="Discard all {{ pending|length }}?">Discard all</button>
+        </form>
+      </div>
+      <p class="muted small">From your import or update. Nothing changes on your lists until you add it.{% if unsure %} The ones marked <span class="badge check-badge">Check</span> are a guess: pick the right title or add them as typed.{% endif %}</p>
+      {% for item in pending %}
+        <div class="pending-item{% if not item.sure %} unsure{% endif %}">
+          {% if item.poster_url %}
+            <img class="poster" src="{{ item.poster_url }}" alt="" loading="lazy" width="46" height="69">
+          {% else %}
+            <div class="poster none" aria-hidden="true">{% if item.kind == 'movie' %}🎬{% else %}📺{% endif %}</div>
+          {% endif %}
+          <div class="entry-content">
+            <div>
+              <span class="entry-title">{{ item.title }}</span>
+              {% if item.year %}<span class="muted">{{ item.year }}</span>{% endif %}
+              <span class="badge">{{ item.get_kind_display }}</span>
+              {% if item.season and item.kind == 'show' %}<span class="badge season-badge">Season {{ item.season }}</span>{% endif %}
+              {% if not item.sure %}<span class="badge check-badge">Check</span>{% endif %}
+            </div>
+            {% if item.entry_id %}
+              <div class="muted small">On your list as “{{ item.line }}”. Which title is it?</div>
+            {% elif item.line|lower != item.title|lower %}
+              <div class="muted small">You wrote “{{ item.line }}”</div>
+            {% endif %}
+            <form method="post" action="{% url 'lists:pending_update' item.pk %}" class="pending-form">
+              {% csrf_token %}
+              {% if item.candidates %}
+                <select name="choice" data-autosubmit aria-label="Which title is it?">
+                  {% for value, label in item.options %}<option value="{{ value }}"{% if value == item.choice %} selected{% endif %}>{{ label }}</option>{% endfor %}
+                </select>
+              {% else %}
+                <input type="hidden" name="choice" value="typed">
+              {% endif %}
+              <div class="pending-row">
+                {% if item.choice == 'typed' and not item.entry_id %}
+                  <select name="kind" data-autosubmit aria-label="Movie or TV show">
+                    <option value="movie"{% if item.kind == 'movie' %} selected{% endif %}>Movie</option>
+                    <option value="show"{% if item.kind == 'show' %} selected{% endif %}>TV show</option>
+                  </select>
+                {% endif %}
+                {% if item.entry_id %}
+                  <button type="submit" name="add" value="1" class="btn small">✓ {% if item.choice == 'typed' %}Keep as typed{% else %}Use this{% endif %}</button>
+                  <button type="submit" formaction="{% url 'lists:pending_discard' item.pk %}" class="link small">Not now</button>
+                {% else %}
+                  <select name="status" data-autosubmit aria-label="Add as">
+                    <option value="want"{% if item.status == 'want' %} selected{% endif %}>Want to watch</option>
+                    <option value="watched"{% if item.status == 'watched' %} selected{% endif %}>Watched</option>
+                  </select>
+                  <button type="submit" name="add" value="1" class="btn small">+ Add</button>
+                  <button type="submit" formaction="{% url 'lists:pending_discard' item.pk %}" class="link danger small">Discard</button>
+                {% endif %}
+              </div>
+            </form>
+            {% if tmdb_enabled %}
+              <details class="research">
+                <summary class="small">Search for another title</summary>
+                <form method="post" action="{% url 'lists:pending_pick' item.pk %}" autocomplete="off">
+                  {% csrf_token %}<input type="hidden" name="tmdb_id"><input type="hidden" name="kind">
+                  <div class="title-search" data-search-url="{% url 'lists:search' %}">
+                    <input type="search" name="q" value="{{ item.title }}" aria-label="Search TMDB" data-search-now>
+                    <ul class="suggestions" hidden></ul>
+                  </div>
+                </form>
+              </details>
+            {% endif %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  <div class="card" id="import">
+    <h3>📋 Import a list</h3>
+    {% if last_import %}
+      <p class="small {% if last_import.status == 'failed' %}flash error{% else %}muted{% endif %}">
+        {% if last_import.status == 'failed' %}Your last {% if last_import.purpose == 'link' %}update{% else %}import{% endif %} didn't work: {{ last_import.message }}
+        {% elif last_import.purpose == 'link' %}Your last update ({{ last_import.created_at|timesince }} ago): {{ last_import.message }}
+        {% else %}Your last import ({{ last_import.created_at|timesince }} ago) found {{ last_import.found }} new title{{ last_import.found|pluralize }}{% if last_import.used_ai %}, with help from AI{% endif %}. {{ last_import.message }}{% endif %}
+      </p>
+    {% endif %}
+    <p class="muted">Paste titles from anywhere: a note on your phone, a spreadsheet, a message with recommendations. Movies and TV shows can be mixed.</p>
+    <form method="post" class="stack" action="{% url 'lists:manage' %}#import">
+      {% csrf_token %}
+      {{ form.non_field_errors }}
+      <div class="field">{{ form.text }}{{ form.text.errors }}</div>
+      <div class="field pills">{{ form.add_as.label_tag }}{{ form.add_as }}</div>
+      {% if tags %}<div class="field">{{ form.tag.label_tag }}{{ form.tag }}</div>{% endif %}
+      <button type="submit" class="wide"{% if running %} disabled{% endif %}>Find these titles</button>
+    </form>
+    <p class="muted small">
+      {% if tmdb_enabled %}Each line is looked up on TMDB.{% else %}Titles are kept as you typed them (TMDB isn't set up).{% endif %}
+      {% if ai_blocked %}{% else %}AI helps with typos, other languages and text that isn't a list.{% endif %}
+      You check everything before it's added.
+    </p>
+  </div>
+
+  <div class="card" id="groups">
+    <h3>🏷️ My groups</h3>
+    <p class="muted">Your own ways to sort what to watch, the same for movies and TV shows. A title can be in several. Choose one above a list to see only its titles. Only you see them.</p>
+    {% for t in tags %}
+      <form method="post" action="{% url 'lists:tag_update' t.pk %}" class="tag-row">
+        {% csrf_token %}
+        <input type="text" name="emoji" value="{{ t.emoji }}" maxlength="8" aria-label="Emoji" class="emoji-input" placeholder="🙂">
+        <input type="text" name="name" value="{{ t.name }}" maxlength="40" required aria-label="Name">
+        <span class="muted small count">{{ t.count }}</span>
+        <button type="submit" class="btn small ghost">Save</button>
+        <button type="submit" formaction="{% url 'lists:tag_delete' t.pk %}" class="link danger small" data-confirm="Delete {{ t }}? Its titles stay on your lists.">Delete</button>
+      </form>
+    {% endfor %}
+    <form method="post" action="{% url 'lists:tag_add' %}" class="tag-row new">
+      {% csrf_token %}
+      <input type="text" name="emoji" maxlength="8" aria-label="Emoji" class="emoji-input" placeholder="🙂">
+      <input type="text" name="name" maxlength="40" required placeholder="New group, e.g. Christmas" aria-label="New group">
+      <button type="submit" class="btn small">+ Add</button>
+    </form>
+    {% if suggestions %}
+      <div class="suggested">
+        <span class="muted small">Ideas:</span>
+        {% for emoji, name in suggestions %}
+          <form method="post" action="{% url 'lists:tag_add' %}" class="inline">
+            {% csrf_token %}<input type="hidden" name="emoji" value="{{ emoji }}"><input type="hidden" name="name" value="{{ name }}">
+            <button type="submit" class="tag-chip">+ {{ emoji }} {{ name }}</button>
+          </form>
+        {% endfor %}
+      </div>
+    {% endif %}
+  </div>
+
+  <div class="card" id="watch">
+    <h3>📡 Where you watch</h3>
+    {% if tmdb_error %}<p class="flash error small">{{ tmdb_error }}</p>{% endif %}
+    <form method="post" action="{% url 'lists:watch_settings' %}" class="field">
+      {% csrf_token %}
+      <label for="region">Country</label>
+      {% if regions %}
+        <select name="region" id="region" data-autosubmit>
+          {% for code, name in regions %}<option value="{{ code }}"{% if code == region %} selected{% endif %}>{{ name }}</option>{% endfor %}
+        </select>
+      {% else %}
+        <div class="add-row"><input type="text" name="region" id="region" value="{{ region }}" maxlength="2" placeholder="e.g. DE"><button type="submit" class="ghost">Save</button></div>
+      {% endif %}
+      <div class="muted small">What's streaming differs by country.</div>
+    </form>
+
+    <form method="post" action="{% url 'lists:watch_settings' %}" class="stack services-form">
+      {% csrf_token %}
+      <b>Your streaming services</b>
+      {% if services %}
+        <div class="service-grid">
+          {% for s in services %}
+            <label class="service{% if forloop.counter > 12 and s.name|lower not in my_services %} more{% endif %}">
+              <input type="checkbox" name="services" value="{{ s.name }}"{% if s.name|lower in my_services %} checked{% endif %}>
+              {% if s.logo %}<img src="https://image.tmdb.org/t/p/w45{{ s.logo }}" alt="" width="24" height="24" loading="lazy">{% endif %}
+              <span>{{ s.name }}</span>
+            </label>
+          {% endfor %}
+        </div>
+        {% if services|length > 12 %}<button type="button" class="link small" data-show-more=".service.more">Show all {{ services|length }}</button>{% endif %}
+      {% endif %}
+      <button type="submit" class="wide">Save services</button>
+    </form>
+
+    <div class="own-services">
+      <b>Your other services</b>
+      <p class="muted small">Ways you watch that {% if services %}aren't in the list above{% else %}TMDB doesn't list{% endif %}, e.g. your DVDs or the cinema. A name you add on a title's page appears here; removing it here removes it from all titles.</p>
+      {% for name, count in own_services %}
+        <form method="post" action="{% url 'lists:own_service_remove' %}" class="line own-service" data-confirm="Remove {{ name }}{% if count %} from your services and {{ count }} title{{ count|pluralize }}{% endif %}?">
+          {% csrf_token %}<input type="hidden" name="name" value="{{ name }}">
+          <span><span class="chip prov-name yours">{{ name }}</span> <span class="muted small">{{ count }} title{{ count|pluralize }}</span></span>
+          <button type="submit" class="link danger small">Remove</button>
+        </form>
+      {% endfor %}
+      <form method="post" action="{% url 'lists:own_service_add' %}" class="add-row own-service-add">
+        {% csrf_token %}
+        <input type="text" name="name" maxlength="60" required placeholder="e.g. My DVDs" aria-label="Other service" autocomplete="off">
+        <button type="submit" class="ghost">+ Add</button>
+      </form>
+    </div>
+    <p class="muted small">Your lists show your services first when grouped by where to watch.</p>
+
+    {% if tmdb_enabled %}
+      <form method="post" action="{% url 'lists:refresh_all' %}" class="refresh">
+        {% csrf_token %}
+        <button type="submit" class="ghost wide"{% if running %} disabled{% endif %}>↻ Update all my titles from TMDB</button>
+        <p class="muted small">Where to watch is checked again weekly by itself.{% if unlinked %} {{ unlinked }} title{{ unlinked|pluralize }} you typed in by hand {% if unlinked == 1 %}has{% else %}have{% endif %} no details yet: this also finds {% if unlinked == 1 %}it{% else %}them{% endif %} on TMDB, and asks you under <b>Check and add</b> when it isn't sure which title you mean.{% endif %}</p>
+      </form>
+    {% endif %}
+  </div>
+
+  {% if tmdb_enabled %}
+    <p class="muted small center attribution">Movie and TV show details from <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a>; this app uses the TMDB API but is not endorsed or certified by TMDB. Where to watch by <a href="https://www.justwatch.com/" target="_blank" rel="noopener">JustWatch</a>.</p>
+  {% endif %}
+{% endblock %}

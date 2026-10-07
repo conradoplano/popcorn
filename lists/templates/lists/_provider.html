@@ -1,0 +1,8 @@
+{# A streaming service: its logo, or its name when there's none. Highlighted when it's one you have. #}
+{% with yours=p.name|lower %}
+  {% if p.logo %}
+    <img class="prov{% if yours in services %} yours{% endif %}" src="https://image.tmdb.org/t/p/w45{{ p.logo }}" alt="{{ p.name }}" title="{{ p.name }}{% if yours in services %} (yours){% endif %}" loading="lazy" width="22" height="22">
+  {% else %}
+    <span class="chip prov-name{% if yours in services %} yours{% endif %}">{{ p.name }}</span>
+  {% endif %}
+{% endwith %}

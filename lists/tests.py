@@ -15,8 +15,11 @@ class ListTests(TestCase):
     def entry(self, title="Dune", kind=Entry.Kind.MOVIE, user=None, **fields):
         return Entry.objects.create(user=user or self.user, kind=kind, title=title, **fields)
 
-    def test_home_opens_movies(self):
-        self.assertRedirects(self.client.get(reverse("lists:home")), reverse("lists:movies"))
+    def test_home(self):
+        self.entry("Dune", status=Entry.Status.WANT)
+        response = self.client.get(reverse("lists:home"))
+        self.assertContains(response, "Hi Sam")
+        self.assertEqual(response.context["to_watch_movies"], 1)
 
     def test_add_movie_goes_to_want_to_watch(self):
         response = self.client.post(reverse("lists:movies"), {"title": "  Past   Lives ", "year": "2023"})

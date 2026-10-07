@@ -133,26 +133,5 @@ class FriendsTests(TestCase):
         mine = self.sam.entries.get()
         self.assertEqual((mine.title, mine.year, mine.status, mine.rating), ("Aftersun", 2022, "want", None))
 
-    def test_public_list_is_readable_by_anyone_but_only_that_list(self):
-        Entry.objects.create(user=self.alex, kind=Entry.Kind.MOVIE, title="Aftersun")
-        Entry.objects.create(user=self.alex, kind=Entry.Kind.SHOW, title="The Bear")
-        self.client.logout()
-        movies = reverse("friends:public", args=[self.alex.public_token, "movies"])
-        shows = reverse("friends:public", args=[self.alex.public_token, "shows"])
-        self.assertEqual(self.client.get(movies).status_code, 404)
-
-        self.alex.movies_public = True
-        self.alex.save()
-        response = self.client.get(movies)
-        self.assertContains(response, "Aftersun")
-        self.assertNotContains(response, "+ My list")
-        self.assertNotContains(response, shows)  # no tab to the private list
-        self.assertEqual(self.client.get(shows).status_code, 404)
-
-    def test_sharing_switches(self):
-        self.client.post(reverse("friends:sharing"), {"shows_public": "on"})
-        self.sam.refresh_from_db()
-        self.assertEqual((self.sam.movies_public, self.sam.shows_public), (False, True))
-
     def test_unknown_list_kind_is_not_found(self):
         self.assertEqual(self.client.get(f"/friends/{self.alex.pk}/books/").status_code, 404)

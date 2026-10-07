@@ -17,7 +17,7 @@
 <body class="{% if user.is_authenticated %}has-tabs{% endif %}" data-sw-url="{% url 'core:sw' %}">
   <header class="topbar">
     <div class="wrap">
-      <a href="{% if user.is_authenticated %}{% url 'lists:movies' %}{% else %}{% url 'accounts:login' %}{% endif %}" class="brand"><img src="{% static 'icons/icon-180.png' %}" alt="">{{ site_name }}</a>
+      <a href="{% if user.is_authenticated %}{% url 'lists:home' %}{% else %}{% url 'accounts:login' %}{% endif %}" class="brand"><img src="{% static 'icons/icon-180.png' %}" alt="">{{ site_name }}</a>
       {% if user.is_authenticated %}
         <div class="who">
           <span class="me">{{ user.get_short_name }}</span>
@@ -39,12 +39,16 @@
   {% if user.is_authenticated %}
     {% with ns=request.resolver_match.namespace name=request.resolver_match.url_name %}
     <nav class="tabs">
+      <a href="{% url 'lists:home' %}" class="{% if name == 'home' %}on{% endif %}">
+        <span class="ic">🏠</span>Home</a>
       <a href="{% url 'lists:movies' %}" class="{% if name == 'movies' or entry.kind == 'movie' %}on{% endif %}">
         <span class="ic">🎬</span>Movies</a>
       <a href="{% url 'lists:shows' %}" class="{% if name == 'shows' or entry.kind == 'show' %}on{% endif %}">
         <span class="ic">📺</span>TV shows</a>
       <a href="{% url 'friends:friends' %}" class="{% if ns == 'friends' %}on{% endif %}">
-        <span class="ic">👥</span>Friends</a>
+        <span class="ic">👥</span>Friends{% if friend_requests %}<span class="tab-badge" aria-label="{{ friend_requests }} friend request{{ friend_requests|pluralize }}">{{ friend_requests }}</span>{% endif %}</a>
+      <a href="{% url 'lists:manage' %}" class="{% if name == 'manage' %}on{% endif %}">
+        <span class="ic">⚙️</span>Manage{% if pending_count %}<span class="tab-badge" aria-label="{{ pending_count }} to check">{{ pending_count }}</span>{% endif %}</a>
     </nav>
     {% endwith %}
   {% endif %}

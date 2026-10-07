@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+
+{% block title %}{{ site_name }}{% endblock %}
+
+{% block content %}
+  <div class="page-head">
+    <h2><span class="head-ic">🏠</span> Hi {{ user.get_short_name }}</h2>
+  </div>
+
+  {% include "friends/_requests.html" %}
+
+  {% if pending_count %}
+    <a class="card plain to-check" href="{% url 'lists:manage' %}#pending">
+      <span><b>{{ pending_count }} imported title{{ pending_count|pluralize }}</b> {% if pending_count == 1 %}waits{% else %}wait{% endif %} for you to check</span>
+      <span class="go">›</span>
+    </a>
+  {% endif %}
+
+  <section class="home-section">
+    <h3>New from your friends</h3>
+    {% if not has_friends %}
+      <div class="card empty center">
+        <p class="big">👥</p>
+        <p>See what your friends want to watch and have watched. <a href="{% url 'friends:friends' %}#invite">Invite a friend</a></p>
+      </div>
+    {% else %}
+      {% for group in news %}
+        <div class="card friend-news">
+          <div class="line">
+            <a class="plain" href="{% url 'friends:friend' group.friend.pk 'movies' %}"><b>{{ group.friend }}</b></a>
+            <span class="muted small">
+              {% if group.added %}added {{ group.added }}{% endif %}{% if group.added and group.watched %} · {% endif %}{% if group.watched %}watched {{ group.watched }}{% endif %}
+            </span>
+          </div>
+          <div class="tiles">
+            {% for entry, what, when in group.items %}
+              <div class="tile">
+                {% if entry.poster_url %}
+                  <img class="tile-poster" src="{{ entry.poster_url }}" alt="" loading="lazy" width="92" height="138">
+                {% else %}
+                  <div class="tile-poster none" aria-hidden="true">{% if entry.kind == 'movie' %}🎬{% else %}📺{% endif %}</div>
+                {% endif %}
+                <div class="tile-title" title="{{ entry }}">{{ entry.title }}</div>
+                <div class="muted tiny">
+                  {% if entry.season %}Season {{ entry.season }} · {% endif %}{% if what == 'watched' %}Watched{% if entry.rating %} {% for n in entry.stars %}{% if n <= entry.rating %}★{% endif %}{% endfor %}{% endif %}{% else %}Wants to watch{% endif %}
+                </div>
+                {% if entry.on_my_list %}
+                  <span class="badge mine-badge tiny">✓ On my list</span>
+                {% else %}
+                  <form method="post" action="{% url 'lists:entry_copy' entry.pk %}">
+                    {% csrf_token %}<input type="hidden" name="next" value="{% url 'lists:home' %}">
+                    <button type="submit" class="btn small ghost tile-add">+ My list</button>
+                  </form>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+          {% if group.more %}<p class="small more-link"><a href="{% url 'friends:friend' group.friend.pk 'movies' %}">and {{ group.more }} more ›</a></p>{% endif %}
+        </div>
+      {% empty %}
+        <p class="muted">Nothing new from your friends since your last visit {{ since|timesince }} ago.</p>
+      {% endfor %}
+    {% endif %}
+  </section>
+
+  <section class="home-section">
+    <h3>Your lists</h3>
+    <div class="home-counts">
+      <a class="card plain" href="{% url 'lists:movies' %}?show=want"><span class="big-num">{{ to_watch_movies }}</span><span class="muted small">🎬 movie{{ to_watch_movies|pluralize }} to watch</span></a>
+      <a class="card plain" href="{% url 'lists:shows' %}?show=want"><span class="big-num">{{ to_watch_shows }}</span><span class="muted small">📺 show{{ to_watch_shows|pluralize }} to watch</span></a>
+    </div>
+    {% if watching or recent %}
+      <div class="card">
+        <h3 class="small-head">{% if watching %}Watching now{% else %}Recently added to watch{% endif %}</h3>
+        <div class="tiles">
+          {% for entry in watching|default:recent %}
+            <a class="tile plain" href="{% url 'lists:entry' entry.pk %}">
+              {% if entry.poster_url %}
+                <img class="tile-poster" src="{{ entry.poster_url }}" alt="" loading="lazy" width="92" height="138">
+              {% else %}
+                <div class="tile-poster none" aria-hidden="true">{% if entry.kind == 'movie' %}🎬{% else %}📺{% endif %}</div>
+              {% endif %}
+              <div class="tile-title">{{ entry.title }}</div>
+              {% if entry.season %}<div class="muted tiny">Season {{ entry.season }}</div>{% endif %}
+            </a>
+          {% endfor %}
+        </div>
+      </div>
+    {% endif %}
+  </section>
+{% endblock %}

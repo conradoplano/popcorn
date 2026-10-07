@@ -5,7 +5,56 @@
 {% block content %}
   <p class="back"><a href="{% if entry.kind == 'movie' %}{% url 'lists:movies' %}{% else %}{% url 'lists:shows' %}{% endif %}?show={{ entry.status }}">‹ {% if entry.kind == 'movie' %}Movies{% else %}TV shows{% endif %}</a></p>
   <div class="card">
-    <h2>{{ entry.title }}{% if entry.year %} <span class="muted">{{ entry.year }}</span>{% endif %}</h2>
+    <div class="entry-head">
+      {% if entry.poster_url %}<img class="poster big" src="{{ entry.poster_url }}" alt="" width="92" height="138">{% endif %}
+      <div>
+        <h2>{{ entry.title }}{% if entry.year %} <span class="muted">{{ entry.year }}</span>{% endif %}</h2>
+        {% if entry.season %}<p class="season-line"><span class="badge season-badge">Season {{ entry.season }}</span>{% if entry.season_year or entry.episodes %} <span class="muted small">{% if entry.season_year %}{{ entry.season_year }}{% endif %}{% if entry.season_year and entry.episodes %} · {% endif %}{% if entry.episodes %}{{ entry.episodes }} episode{{ entry.episodes|pluralize }}{% endif %}</span>{% endif %}</p>{% endif %}
+        {% if entry.genres %}<div class="chips">{% for g in entry.genres %}<span class="chip">{{ g }}</span>{% endfor %}</div>{% endif %}
+        {% if entry.overview %}<p class="overview">{{ entry.overview }}</p>{% endif %}
+      </div>
+    </div>
+    <div class="watch-where">
+      <b>Where to watch</b>
+      {% if entry.watch %}
+        <div class="chips">
+          {% for p in entry.watch %}
+            <span class="chip prov-name{% if p.name|lower in services %} yours{% endif %}">{% if p.logo %}<img src="https://image.tmdb.org/t/p/w45{{ p.logo }}" alt="" width="18" height="18">{% endif %}{{ p.name }}</span>
+          {% endfor %}
+        </div>
+      {% elif entry.providers_checked_at %}
+        <span class="muted small">Not streaming in your country (maybe to rent or buy).</span>
+      {% else %}
+        <span class="muted small">Unknown. Enter it below{% if search_enabled and not entry.tmdb_id %}, or find the title on TMDB{% endif %}.</span>
+      {% endif %}
+      {% if entry.tmdb_id %}
+        <div class="muted small">
+          {% if not entry.providers_sync %}Not updated from TMDB.{% elif entry.providers_checked_at %}Checked {{ entry.providers_checked_at|timesince }} ago.{% endif %}
+          <a href="{{ entry.tmdb_url }}" target="_blank" rel="noopener">TMDB page</a>
+          {% if entry.providers_sync %}
+            <form method="post" action="{% url 'lists:entry_refresh' entry.pk %}" class="inline">
+              {% csrf_token %} · <button type="submit" class="link small">Check again</button>
+            </form>
+          {% endif %}
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  {% if search_enabled and not entry.tmdb_id %}
+    <form method="post" action="{% url 'lists:entry_link' entry.pk %}" class="card" autocomplete="off">
+      {% csrf_token %}
+      <h3>Find it on TMDB</h3>
+      <p class="muted small">For its poster, genres and where to watch.</p>
+      <input type="hidden" name="tmdb_id"><input type="hidden" name="kind">
+      <div class="title-search" data-search-url="{% url 'lists:search' %}" data-kind="{{ entry.kind }}">
+        <input type="search" name="q" value="{{ entry.title }}" aria-label="Search TMDB" data-search-now>
+        <ul class="suggestions" hidden></ul>
+      </div>
+    </form>
+  {% endif %}
+
+  <div class="card">
     <form method="post" class="stack">
       {% csrf_token %}
       {{ form.non_field_errors }}
@@ -13,8 +62,36 @@
         <div class="field">{{ form.title.label_tag }}{{ form.title }}{{ form.title.errors }}</div>
         <div class="field year-field">{{ form.year.label_tag }}{{ form.year }}{{ form.year.errors }}</div>
       </div>
+      {% if form.season %}
+        <div class="field">{{ form.season.label_tag }}{{ form.season }}<div class="muted small">{{ form.season.help_text }} Each season is a title of its own, with its own status.</div>{{ form.season.errors }}</div>
+      {% endif %}
       <div class="field pills">{{ form.status.label_tag }}{{ form.status }}{{ form.status.errors }}</div>
       <div class="field pills rating-pills">{{ form.rating.label_tag }}{{ form.rating }}{{ form.rating.errors }}</div>
+      {% if form.tags.field.queryset %}
+        <div class="field pills tag-pills">{{ form.tags.label_tag }}{{ form.tags }}{{ form.tags.errors }}</div>
+      {% else %}
+        <p class="muted small">Sort your titles into your own groups, like “With the kids”: <a href="{% url 'lists:manage' %}#groups">create groups</a>.</p>
+      {% endif %}
+      <div class="field">
+        {{ form.provider_names.label_tag }}
+        <div class="token-input" data-options="#provider-options" data-locked="#locked-providers" data-logos>{{ form.provider_names }}</div>
+        <div class="muted small">{{ form.provider_names.help_text }}{% if locked_providers %} The ones from TMDB stay up to date; what you add is kept too.{% endif %}</div>
+        {{ form.provider_names.errors }}
+        {% if form.providers_sync %}
+          <label class="switch-row sync-row">
+            {{ form.providers_sync }}<span class="switch" aria-hidden="true"></span>
+            <span>Keep updated from TMDB <span class="muted small">(off: change all of them yourself)</span></span>
+          </label>
+        {% endif %}
+        {{ locked_providers|json_script:"locked-providers" }}
+      </div>
+      <div class="field">
+        {{ form.genre_names.label_tag }}
+        <div class="token-input" data-options="#genre-options">{{ form.genre_names }}</div>
+        {{ form.genre_names.errors }}
+      </div>
+      {{ provider_options|json_script:"provider-options" }}
+      {{ genre_options|json_script:"genre-options" }}
       <div class="field">{{ form.notes.label_tag }}{{ form.notes }}{{ form.notes.errors }}</div>
       <button type="submit" class="wide">Save</button>
     </form>

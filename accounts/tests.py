@@ -31,7 +31,7 @@ class CodeLoginTests(TestCase):
         self.assertEqual(len(mail.outbox), 1)
 
         response = self.client.post(reverse("accounts:verify"), {"code": code_from_mail()})
-        self.assertRedirects(response, reverse("lists:movies"))
+        self.assertRedirects(response, reverse("lists:home"))
         self.assertEqual(int(self.client.session["_auth_user_id"]), self.user.pk)
 
     def test_unknown_email_gets_same_flow_but_no_mail(self):
@@ -83,7 +83,7 @@ class CodeLoginTests(TestCase):
     @override_settings(DEV_LOGIN=True)
     def test_dev_login_signs_in_without_code_or_mail(self):
         response = self._request_code()
-        self.assertRedirects(response, reverse("lists:movies"), fetch_redirect_response=False)
+        self.assertRedirects(response, reverse("lists:home"), fetch_redirect_response=False)
         self.assertEqual(int(self.client.session["_auth_user_id"]), self.user.pk)
         self.assertEqual(len(mail.outbox), 0)
 
@@ -113,7 +113,7 @@ class CodeLoginTests(TestCase):
     def test_next_parameter_must_stay_on_site(self):
         self.client.post(f"{reverse('accounts:login')}?next=https://evil.example/", {"email": "sam@example.com"})
         response = self.client.post(reverse("accounts:verify"), {"code": code_from_mail()})
-        self.assertRedirects(response, reverse("lists:movies"))
+        self.assertRedirects(response, reverse("lists:home"))
 
 
 class RegisterTests(TestCase):
@@ -126,11 +126,10 @@ class RegisterTests(TestCase):
         self.assertFalse(User.objects.filter(email="alex@example.com").exists())
 
         response = self.client.post(reverse("accounts:verify"), {"code": code_from_mail()})
-        self.assertRedirects(response, reverse("lists:movies"))
+        self.assertRedirects(response, reverse("lists:home"))
         user = User.objects.get(email="alex@example.com")
         self.assertEqual(user.name, "Alex Rivers")
         self.assertFalse(user.has_usable_password())
-        self.assertFalse(user.movies_public or user.shows_public)  # lists start private
 
     def test_registering_an_existing_address_just_logs_in(self):
         user = User.objects.create_user(email="alex@example.com", name="Alex")
@@ -149,4 +148,3 @@ class RegisterTests(TestCase):
         a = User.objects.create_user(email="a@example.com")
         b = User.objects.create_user(email="b@example.com")
         self.assertNotEqual(a.invite_token, b.invite_token)
-        self.assertNotEqual(a.invite_token, a.public_token)

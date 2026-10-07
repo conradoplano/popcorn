@@ -3,10 +3,9 @@
 {% block title %}{{ owner }}'s {% if kind == 'movie' %}movies{% else %}TV shows{% endif %} · {{ site_name }}{% endblock %}
 
 {% block content %}
-  {% if not public %}<p class="back"><a href="{% url 'friends:friends' %}">‹ Friends</a></p>{% endif %}
+  <p class="back"><a href="{% url 'friends:friends' %}">‹ Friends</a></p>
   <div class="page-head">
     <h2>{{ owner }}'s lists</h2>
-    {% if public %}<span class="badge public-badge">🌍 Public</span>{% endif %}
   </div>
 
   {% if tabs|length > 1 %}
@@ -18,6 +17,7 @@
   {% endif %}
 
   {% include "lists/_pills.html" %}
+  {% if new_count %}<p class="muted small"><span class="badge new-badge">New</span> {{ new_count }} title{{ new_count|pluralize }} here {% if new_count == 1 %}was{% else %}were{% endif %} added or watched since your last visit.</p>{% endif %}
 
   {% if rows %}
     <div class="list-search"><input type="search" placeholder="Search this list" aria-label="Search this list" data-filter=".entry-row"></div>
@@ -30,10 +30,4 @@
     <div class="card empty center"><p class="muted">Nothing here yet.</p></div>
   {% endif %}
 
-  {% if public and not user.is_authenticated %}
-    <div class="card center cta">
-      <p>Keep your own lists of movies and TV shows, rate them and share them with friends.</p>
-      <a class="btn" href="{% url 'accounts:register' %}">Create an account</a>
-    </div>
-  {% endif %}
 {% endblock %}

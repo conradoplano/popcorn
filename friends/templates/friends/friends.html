@@ -8,31 +8,15 @@
   </div>
   <p class="muted intro">Friends see each other's movie and TV show lists – nothing else, no comments or likes.</p>
 
-  {% if incoming %}
-    <div class="card requests">
-      <h3>Want to share lists with you</h3>
-      {% for r in incoming %}
-        <div class="person">
-          <div class="person-text">
-            <b>{{ r.from_user }}</b>
-            <div class="muted small">{{ r.from_user.email }}</div>
-          </div>
-          <div class="actions">
-            <form method="post" action="{% url 'friends:accept' r.pk %}" class="inline">{% csrf_token %}<button type="submit" class="btn small">Accept</button></form>
-            <form method="post" action="{% url 'friends:decline' r.pk %}" class="inline">{% csrf_token %}<button type="submit" class="link danger">Decline</button></form>
-          </div>
-        </div>
-      {% endfor %}
-    </div>
-  {% endif %}
+  {% include "friends/_requests.html" %}
 
   <div class="card">
     <h3>Your friends</h3>
     {% for p in people %}
       <div class="person">
         <a class="person-text plain" href="{% url 'friends:friend' p.pk 'movies' %}">
-          <b>{{ p }}</b>
-          <div class="muted small">🎬 {{ p.movies }} movie{{ p.movies|pluralize }} · 📺 {{ p.shows }} show{{ p.shows|pluralize }}</div>
+          <b>{{ p }}</b>{% if p.new %} <span class="badge new-badge">{{ p.new }} new</span>{% endif %}
+          <div class="muted small">🎬 {{ p.movies }} movie{{ p.movies|pluralize }} · 📺 {{ p.shows }} show{{ p.shows|pluralize }}{% if p.last_active %} · active {{ p.last_active|timesince }} ago{% endif %}</div>
         </a>
         <form method="post" action="{% url 'friends:remove' p.pk %}" class="inline" data-confirm="Stop sharing lists with {{ p }}?">
           {% csrf_token %}<button type="submit" class="link danger">Remove</button>
@@ -72,28 +56,4 @@
     </form>
   </div>
 
-  <div class="card" id="public">
-    <h3>🌍 Public lists</h3>
-    <p class="muted">A public list can be seen by anyone with its link, even without an account. Your friends always see your lists.</p>
-    <form method="post" action="{% url 'friends:sharing' %}" class="stack">
-      {% csrf_token %}
-      <label class="switch-row">
-        <input type="checkbox" name="movies_public" {% if user.movies_public %}checked{% endif %} data-autosubmit>
-        <span class="switch" aria-hidden="true"></span>
-        <span>Movies are public</span>
-      </label>
-      {% if user.movies_public %}
-        <div class="copy-row"><input type="text" readonly value="{{ public_movies_url }}" id="public-movies" aria-label="Public movies link"><button type="button" class="ghost" data-copy="#public-movies">Copy</button></div>
-      {% endif %}
-      <label class="switch-row">
-        <input type="checkbox" name="shows_public" {% if user.shows_public %}checked{% endif %} data-autosubmit>
-        <span class="switch" aria-hidden="true"></span>
-        <span>TV shows are public</span>
-      </label>
-      {% if user.shows_public %}
-        <div class="copy-row"><input type="text" readonly value="{{ public_shows_url }}" id="public-shows" aria-label="Public TV shows link"><button type="button" class="ghost" data-copy="#public-shows">Copy</button></div>
-      {% endif %}
-      <noscript><button type="submit">Save</button></noscript>
-    </form>
-  </div>
 {% endblock %}

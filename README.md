@@ -9,24 +9,52 @@ The name is set with `SITE_NAME`, so renaming the app only takes one environment
 
 ## What it does
 
+- **🏠 Home** (where the app opens): friend requests to answer, imported titles waiting to be checked, and
+  **new from your friends**: per friend, the titles they added or watched since your last visit (opening the
+  app after more than an hour away), with **+ My list** on each. Below, how many movies and shows you want to
+  watch and the shows you're watching.
 - **🎬 Movies** and **📺 TV shows**: one list each. Filter by *Want to watch*, *Watching* (shows only),
-  *Watched* or *All*, and search as you type. Add a title (and year) at the top: it goes into the list you're
-  looking at. **✓ Watched** moves a title to what you've seen; tap the stars to rate it from 1 to 5 (tap the
+  *Watched* or *All*, and search as you type. Add a title at the top: typing searches TMDB, and picking a
+  result adds it with its poster, genres and where to stream it (or press Enter to add it as typed). It goes
+  into the list you're looking at. A TV show can be added as the whole show or as one season (each its own
+  title). **Group by** genre or where to watch (your own streaming services first); each title is under one
+  heading. **My groups** (e.g. "With the kids") filter both lists. **✓ Watched** moves a title to what you've seen; tap the stars to rate it from 1 to 5 (tap the
   same star again to clear it). Rating something you haven't watched yet marks it as watched. A title's page
-  has its status, rating and notes, and removes it.
+  has its overview, season, status, rating, groups, notes, genres and where to watch (TMDB's are kept up to
+  date unless switched off for that title; services you add are kept), finds a title typed by hand on TMDB,
+  and removes it.
 - **👥 Friends**: friends see each other's movie and TV show lists, and nothing else: there are no comments
-  or likes. On a friend's list, **+ My list** puts a title on your own list as one to watch.
+  or likes, and lists are never public. The Friends tab shows a badge for requests waiting for you. Each
+  friend shows how many titles are new since your last visit and when they were last active; on their list
+  the new ones are marked. **+ My list** puts a title on your own list as one to watch.
   - **By email**: the person gets an email and becomes your friend once they accept on their Friends page.
     If the address has no account yet, the email invites them, and the request waits until they register.
     If they had already asked you, you're friends straight away.
   - **By invite link**: everyone has a link (Friends → 🔗 Your invite link). Whoever opens it and signs in or
     registers becomes your friend. *Make a new link* stops the old one working; existing friends stay.
   - **Remove** ends the friendship for both people.
-- **🌍 Public lists**: each list (movies, TV shows) can be made public separately. A public list is at its
-  own link (`/p/<token>/movies/`), readable by anyone, also without an account. Lists start private.
+- **⚙️ Manage**:
+  - **Import a list**: paste titles (one per line, with headings like "Movies:" or "TV shows", years like
+    "(2021)", "S2" for shows) or a message with recommendations. It's read in the background: each line is
+    looked up on TMDB, and AI only helps where that isn't enough (typos, other languages, text that isn't a
+    list). What's found waits under **Check and add**: pick another match, add it as typed, choose *want to
+    watch* or *watched*, then add or discard each one (or all). Titles already on your lists are skipped.
+  - **Where you watch**: your country and your streaming services. Changing the country updates where to watch
+    for all your titles; it's also checked again weekly when you open a list. *Update all my titles* also
+    looks up titles typed in by hand where TMDB has a certain match.
 
-Not built yet: recommendations, and looking titles up in a movie database (e.g. TMDB) for posters and to
-avoid typing.
+Not built yet: recommendations.
+
+## TMDB and AI
+
+- **TMDB** ([The Movie Database](https://www.themoviedb.org/settings/api), free for non-commercial use): set
+  `TMDB_API_KEY` (the API key or the read access token). Where-to-watch data on TMDB comes from JustWatch.
+  `WATCH_REGION` is the default country, `TMDB_LANGUAGE` the language of titles and overviews. Without a key
+  everything works, but titles are kept as typed.
+- **AI** for imports, the same way as Chef: `OPENAI_API_KEY`, `AI_MODEL`, `AI_EFFORT`. Every call is recorded
+  with its cost (admin → AI usage). Someone can use AI once an admin ticks *AI approved* on their user (staff
+  always can); `AI_DAILY_LIMIT_USD` per person (or their own limit) and `AI_GLOBAL_DAILY_LIMIT_USD` for
+  everyone keep it affordable. Without AI, imports still work line by line.
 
 ## Login
 

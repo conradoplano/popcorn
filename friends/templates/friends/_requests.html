@@ -1,0 +1,18 @@
+{# Friend requests waiting for you, on the Friends page and the home page. #}
+{% if incoming %}
+  <div class="card requests" id="requests">
+    <h3>Want to share lists with you</h3>
+    {% for r in incoming %}
+      <div class="person">
+        <div class="person-text">
+          <b>{{ r.from_user }}</b>
+          <div class="muted small">{{ r.from_user.email }}</div>
+        </div>
+        <div class="actions">
+          <form method="post" action="{% url 'friends:accept' r.pk %}" class="inline">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><button type="submit" class="btn small">Accept</button></form>
+          <form method="post" action="{% url 'friends:decline' r.pk %}" class="inline">{% csrf_token %}<input type="hidden" name="next" value="{{ request.path }}"><button type="submit" class="link danger">Decline</button></form>
+        </div>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}

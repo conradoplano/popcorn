@@ -5,34 +5,76 @@
 {% block content %}
   <div class="page-head">
     <h2><span class="head-ic">{% if kind == 'movie' %}🎬{% else %}📺{% endif %}</span> {{ kind_label }}</h2>
-    {% if public %}<a class="badge public-badge" href="{% url 'friends:friends' %}#public" title="Anyone with the link can see this list">🌍 Public</a>{% endif %}
   </div>
 
   <form method="post" class="card add-entry" autocomplete="off">
     {% csrf_token %}
+    {{ form.tmdb_id }}{{ form.season }}
     <div class="add-row">
-      {{ form.title }}
+      {% if search_enabled %}
+        <div class="title-search" data-search-url="{% url 'lists:search' %}" data-kind="{{ kind }}"{% if kind == 'show' %} data-seasons-url="{% url 'lists:seasons' %}"{% endif %}>{{ form.title }}<ul class="suggestions" hidden></ul></div>
+      {% else %}
+        {{ form.title }}
+      {% endif %}
       {{ form.year }}
       <button type="submit">+ Add</button>
     </div>
     {{ form.title.errors }}{{ form.year.errors }}
-    <p class="muted small">{% if show == 'watched' %}Adds to what you've watched.{% elif show == 'watching' %}Adds to what you're watching.{% else %}Adds to what you want to watch.{% endif %}</p>
+    <p class="muted small">
+      {% if search_enabled %}Type to search, then pick the right one{% if kind == 'show' %}: the whole show or one season{% endif %}. {% endif %}{% if show == 'watched' %}Adds to what you've watched{% elif show == 'watching' %}Adds to what you're watching{% else %}Adds to what you want to watch{% endif %}{% if tag_name %}, in {{ tag_name }}{% endif %}.
+      <a href="{% url 'lists:manage' %}#import">Add many at once</a>
+    </p>
   </form>
 
   {% include "lists/_pills.html" %}
+  {% if tag_chips %}
+    <nav class="tag-chips" aria-label="My groups">
+      {% for value, label, count in tag_chips %}
+        <a href="?show={{ show }}&amp;tag={{ value }}" class="tag-chip{% if value == tag %} on{% endif %}"{% if value == tag %} aria-current="true"{% endif %}>{{ label }} <span class="count">{{ count }}</span></a>
+      {% endfor %}
+    </nav>
+  {% endif %}
 
   {% if rows %}
-    <div class="list-search"><input type="search" placeholder="Search this list" aria-label="Search this list" data-filter=".entry-row"></div>
-    <div class="entries">
-      {% for entry in rows %}
-        {% include "lists/_entry_row.html" with own=True %}
-      {% endfor %}
+    <div class="list-tools">
+      <input type="search" placeholder="Search this list" aria-label="Search this list" data-filter=".entry-row">
+      <form method="get" class="group-by">
+        <input type="hidden" name="show" value="{{ show }}">
+        <select name="group" aria-label="Group by" data-autosubmit>
+          {% for value, label in group_choices %}<option value="{{ value }}"{% if value == group %} selected{% endif %}>{% if value %}By {{ label|lower }}{% else %}{{ label }}{% endif %}</option>{% endfor %}
+        </select>
+        <noscript><button type="submit" class="btn small ghost">Show</button></noscript>
+      </form>
     </div>
+    {% if groups %}
+      {% for label, entries, yours in groups %}
+        <details class="group"{% if yours or groups|length <= 4 %} open{% endif %}>
+          <summary>
+            <span class="group-label">{{ label }}</span>
+            {% if yours %}<span class="badge mine-badge">Yours</span>{% endif %}
+            <span class="count">{{ entries|length }}</span>
+          </summary>
+          <div class="entries">
+            {% for entry in entries %}{% include "lists/_entry_row.html" with own=True %}{% endfor %}
+          </div>
+        </details>
+      {% endfor %}
+      {% if group == 'provider' and not user.all_services %}
+        <p class="muted small center">Tell {{ site_name }} which <a href="{% url 'lists:manage' %}#watch">streaming services you have</a> to see them first.</p>
+      {% endif %}
+    {% else %}
+      <div class="entries">
+        {% for entry in rows %}
+          {% include "lists/_entry_row.html" with own=True %}
+        {% endfor %}
+      </div>
+    {% endif %}
   {% else %}
     <div class="card empty center">
       {% if show == 'want' %}
         <p class="big">🍿</p>
-        <p>Nothing to watch yet. Add a {% if kind == 'movie' %}movie{% else %}show{% endif %} someone recommended, or see what your <a href="{% url 'friends:friends' %}">friends</a> are watching.</p>
+        {% if tag_name %}<p>Nothing in {{ tag_name }} yet. Add a title here and it goes into this group.</p>{% else %}
+        <p>Nothing to watch yet. Add a {% if kind == 'movie' %}movie{% else %}show{% endif %} someone recommended, <a href="{% url 'lists:manage' %}#import">paste a whole list</a>, or see what your <a href="{% url 'friends:friends' %}">friends</a> are watching.</p>{% endif %}
       {% elif show == 'watching' %}
         <p>No shows in progress. Mark a show as watching from its page.</p>
       {% elif show == 'watched' %}

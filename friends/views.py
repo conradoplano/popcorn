@@ -1,4 +1,4 @@
-"""Friends: adding them by email or with your invite link, seeing their lists, and making your own lists public."""
+"""Friends: adding them by email or with your invite link, and seeing their lists and what's new on them."""
 import logging
 
 from django.conf import settings
@@ -7,10 +7,11 @@ from django.contrib.auth.decorators import login_required
 from django.core.exceptions import ValidationError
 from django.core.mail import send_mail
 from django.core.validators import validate_email
-from django.db.models import Count, Q
+from django.db.models import Q
 from django.shortcuts import get_object_or_404, redirect, render
 from django.template.loader import render_to_string
 from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_POST
 
 from accounts.models import User, new_token
@@ -18,7 +19,8 @@ from core.context import site_url
 from lists.models import Entry
 from lists.views import chosen_filter, filtered
 
-from .models import FriendRequest, Friendship, are_friends, make_friends, unfriend
+from . import activity
+from .models import FriendRequest, Friendship, are_friends, incoming_requests, make_friends, unfriend
 from .signals import JOIN_SESSION_KEY
 
 logger = logging.getLogger(__name__)
@@ -32,29 +34,30 @@ def _absolute(request, path):
 
 @login_required
 def friends(request):
+    """Your friends, the newest activity first, with what they've added or watched since your last visit."""
     me = request.user
-    friend_ids = Friendship.objects.filter(user=me).values("friend")
-    people = (
-        User.objects.filter(pk__in=friend_ids)
-        .annotate(
-            movies=Count("entries", filter=Q(entries__kind=Entry.Kind.MOVIE)),
-            shows=Count("entries", filter=Q(entries__kind=Entry.Kind.SHOW)),
-        )
-        .order_by("name", "email")
-    )
-    incoming = FriendRequest.objects.filter(to_email__iexact=me.email).select_related("from_user")
+    since = activity.visit(me)
+    people = list(activity.with_activity(User.objects.filter(pk__in=activity.friends_of(me)), since))
+    for person in people:
+        person.last_active = max(filter(None, [person.last_added, person.last_watched]), default=None)
+    people.sort(key=lambda p: (p.new == 0, -(p.last_active.timestamp() if p.last_active else 0), str(p).lower()))
     return render(request, "friends/friends.html", {
         "people": people,
-        "incoming": [r for r in incoming if r.from_user.is_active],
+        "since": since,
+        "incoming": incoming_requests(me),
         "outgoing": me.sent_requests.all(),
         "invite_url": _absolute(request, reverse("friends:join", args=[me.invite_token])),
-        "public_movies_url": _absolute(request, reverse("friends:public", args=[me.public_token, "movies"])),
-        "public_shows_url": _absolute(request, reverse("friends:public", args=[me.public_token, "shows"])),
     })
 
 
 def friends_url():
     return reverse("friends:friends")
+
+
+def _back(request):
+    """The page the form was on (Friends or the home page)."""
+    url = request.POST.get("next", "")
+    return redirect(url if url_has_allowed_host_and_scheme(url, {request.get_host()}) else friends_url())
 
 
 @login_required
@@ -124,7 +127,7 @@ def request_accept(request, pk):
     other = friend_request.from_user
     make_friends(request.user, other)
     messages.success(request, f"You and {other} are now friends.")
-    return redirect(friends_url())
+    return _back(request)
 
 
 @login_required
@@ -135,7 +138,7 @@ def request_decline(request, pk):
         FriendRequest.objects.filter(Q(to_email__iexact=request.user.email) | Q(from_user=request.user)), pk=pk
     )
     friend_request.delete()
-    return redirect(friends_url())
+    return _back(request)
 
 
 @login_required
@@ -155,17 +158,6 @@ def new_invite_link(request):
     request.user.save(update_fields=["invite_token"])
     messages.success(request, "You have a new invite link; the old one no longer works.")
     return redirect(friends_url() + "#invite")
-
-
-@login_required
-@require_POST
-def sharing(request):
-    me = request.user
-    me.movies_public = request.POST.get("movies_public") == "on"
-    me.shows_public = request.POST.get("shows_public") == "on"
-    me.save(update_fields=["movies_public", "shows_public"])
-    messages.success(request, "Saved who can see your lists.")
-    return redirect(friends_url() + "#public")
 
 
 def join(request, token):
@@ -191,41 +183,22 @@ def friend_list(request, pk, kind):
     if not are_friends(request.user, owner):
         messages.error(request, "You can only see the lists of your friends.")
         return redirect(friends_url())
-    return _others_list(request, owner, kind, lambda slug: reverse("friends:friend", args=[owner.pk, slug]))
-
-
-def public_list(request, token, kind):
-    """A list its owner made public: anyone with the link can read it, signed in or not."""
-    owner = get_object_or_404(User, public_token=token, is_active=True)
-    if not owner.is_public(KIND_SLUGS[kind]):
-        return render(request, "friends/not_public.html", {"owner": owner}, status=404)
-    return _others_list(request, owner, kind, lambda slug: reverse("friends:public", args=[token, slug]), public=True)
-
-
-def _others_list(request, owner, slug, url_for, public=False):
-    """Someone else's list, read only. Signed in, you can put any of their titles on your own list."""
+    slug = kind
     kind = KIND_SLUGS[slug]
     show = chosen_filter(request, kind)
     rows, pills = filtered(owner.entries.filter(kind=kind), kind, show)
-    mine = set()
-    if request.user.is_authenticated:
-        mine = {(t.lower(), y) for t, y in request.user.entries.filter(kind=kind).values_list("title", "year")}
-    rows = list(rows)
+    rows = activity.mark_mine(request.user, list(rows))
+    since = activity.since(request.user)
     for row in rows:
-        row.on_my_list = (row.title.lower(), row.year) in mine
-    # On a public page, the other list's tab only appears if that one is public too.
-    tabs = [
-        (s, label, url_for(s)) for s, label in (("movies", "Movies"), ("shows", "TV shows"))
-        if not public or owner.is_public(KIND_SLUGS[s])
-    ]
+        row.is_new = row.added_at > since or bool(row.watched_at and row.watched_at > since)
     return render(request, "friends/others_list.html", {
         "owner": owner,
         "kind": kind,
         "slug": slug,
-        "tabs": tabs,
+        "tabs": [(s, label, reverse("friends:friend", args=[owner.pk, s])) for s, label in (("movies", "Movies"), ("shows", "TV shows"))],
         "rows": rows,
         "pills": pills,
         "show": show,
-        "public": public,
-        "can_copy": request.user.is_authenticated and request.user.pk != owner.pk,
+        "can_copy": True,
+        "new_count": sum(1 for row in rows if row.is_new),
     })

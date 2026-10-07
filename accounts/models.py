@@ -1,5 +1,6 @@
 import secrets
 
+from django.conf import settings
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 from django.utils import timezone
@@ -34,10 +35,21 @@ class User(AbstractBaseUser, PermissionsMixin):
     date_joined = models.DateTimeField(default=timezone.now)
     # Whoever opens /join/<invite_token>/ becomes this user's friend; a new token stops old links working.
     invite_token = models.CharField(max_length=32, unique=True, default=new_token)
-    # Public lists are at /p/<public_token>/..., readable by anyone with the link, signed in or not.
-    public_token = models.CharField(max_length=32, unique=True, default=new_token)
-    movies_public = models.BooleanField("Movies are public", default=False)
-    shows_public = models.BooleanField("TV shows are public", default=False)
+    # Opening the app after a while away is a visit; friends' titles since the visit before are new.
+    last_visit_at = models.DateTimeField(null=True, blank=True)
+    news_since = models.DateTimeField(null=True, blank=True)
+    # Where to watch: the country whose streaming services are shown, and the services they have.
+    watch_region = models.CharField("country", max_length=2, blank=True, help_text="Empty: the app's default.")
+    services = models.JSONField("my streaming services", default=list, blank=True)
+    # Other ways you watch that TMDB doesn't list, e.g. "My DVDs" or "Cinema". Added from a title's page or
+    # in Manage; removing one there removes it from all titles.
+    own_services = models.JSONField("my other services", default=list, blank=True)
+    # AI costs money: everyone can import lists straight away, with AI once an admin approves them.
+    ai_approved = models.BooleanField("AI approved", default=False)
+    ai_daily_limit = models.DecimalField(
+        "AI limit per day (USD)", max_digits=6, decimal_places=2, null=True, blank=True,
+        help_text="Empty: the app's default. 0: no AI.",
+    )
 
     objects = UserManager()
 
@@ -57,8 +69,16 @@ class User(AbstractBaseUser, PermissionsMixin):
     def get_short_name(self):
         return self.name.split(" ")[0] if self.name else self.email.split("@")[0]
 
-    def is_public(self, kind):
-        return self.movies_public if kind == "movie" else self.shows_public
+    @property
+    def all_services(self):
+        """The streaming services you have and your other services, in that order."""
+        seen = {s.lower() for s in self.services}
+        return self.services + [s for s in self.own_services if s.lower() not in seen]
+
+    @property
+    def region(self):
+        return self.watch_region or settings.WATCH_REGION
+
 
 
 class LoginCodeRequest(models.Model):

@@ -1,43 +1,62 @@
 {# One movie or show. own: your list (rate, mark watched, edit); otherwise read only, maybe with "+ My list". #}
-<div class="card entry-row status-{{ entry.status }}" data-search="{{ entry.title|lower }} {{ entry.year|default:'' }} {{ entry.notes|lower }}">
-  <div class="entry-main">
-    <div class="entry-text">
+<div class="card entry-row status-{{ entry.status }}" data-search="{{ entry.search_text }}">
+  {% if entry.poster_url %}
+    <img class="poster" src="{{ entry.poster_url }}" alt="" loading="lazy" width="46" height="69">
+  {% else %}
+    <div class="poster none" aria-hidden="true">{% if entry.kind == 'movie' %}🎬{% else %}📺{% endif %}</div>
+  {% endif %}
+  <div class="entry-content">
+    <div class="entry-main">
+      <div class="entry-text">
+        {% if own %}
+          <a class="entry-title" href="{% url 'lists:entry' entry.pk %}">{{ entry.title }}</a>
+        {% else %}
+          <span class="entry-title">{{ entry.title }}</span>
+        {% endif %}
+        {% if entry.year %}<span class="muted">{{ entry.year }}</span>{% endif %}
+        {% if entry.season %}<span class="badge season-badge">Season {{ entry.season }}</span>{% endif %}
+        {% if entry.is_new %}<span class="badge new-badge">New</span>{% endif %}
+      </div>
       {% if own %}
-        <a class="entry-title" href="{% url 'lists:entry' entry.pk %}">{{ entry.title }}</a>
-      {% else %}
-        <span class="entry-title">{{ entry.title }}</span>
+        {% if entry.status == 'want' %}
+          <form method="post" action="{% url 'lists:entry_status' entry.pk %}" class="inline">
+            {% csrf_token %}<input type="hidden" name="status" value="watched"><input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="btn small ghost">✓ Watched</button>
+          </form>
+        {% endif %}
+      {% elif can_copy %}
+        {% if entry.on_my_list %}
+          <span class="badge mine-badge">On my list</span>
+        {% else %}
+          <form method="post" action="{% url 'lists:entry_copy' entry.pk %}" class="inline">
+            {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <button type="submit" class="btn small ghost">+ My list</button>
+          </form>
+        {% endif %}
       {% endif %}
-      {% if entry.year %}<span class="muted">{{ entry.year }}</span>{% endif %}
     </div>
-    {% if own %}
-      {% if entry.status == 'want' %}
-        <form method="post" action="{% url 'lists:entry_status' entry.pk %}" class="inline">
-          {% csrf_token %}<input type="hidden" name="status" value="watched"><input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <button type="submit" class="btn small ghost">✓ Watched</button>
-        </form>
-      {% endif %}
-    {% elif can_copy %}
-      {% if entry.on_my_list %}
-        <span class="badge mine-badge">On my list</span>
-      {% else %}
-        <form method="post" action="{% url 'lists:entry_copy' entry.pk %}" class="inline">
+    {% if own and entry.tags.all %}
+      <div class="chips">{% for t in entry.tags.all %}<span class="chip tag">{{ t }}</span>{% endfor %}</div>
+    {% endif %}
+    {% if entry.genres or entry.watch %}
+      <div class="chips">
+        {% for p in entry.watch %}{% include "lists/_provider.html" %}{% endfor %}
+        {% for g in entry.genres|slice:":3" %}<span class="chip">{{ g }}</span>{% endfor %}
+      </div>
+    {% endif %}
+    <div class="meta">
+      {% if show == 'all' %}<span class="badge status-badge {{ entry.status }}">{{ entry.get_status_display }}</span>{% endif %}
+      {% if own and entry.status != 'want' %}
+        <form method="post" action="{% url 'lists:entry_rate' entry.pk %}" class="rate" aria-label="Rating">
           {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
-          <button type="submit" class="btn small ghost">+ My list</button>
+          {% for n in entry.stars %}<button type="submit" name="rating" value="{{ n }}" class="star-btn{% if entry.rating and n <= entry.rating %} on{% endif %}" aria-pressed="{% if entry.rating == n %}true{% else %}false{% endif %}" aria-label="{{ n }} star{{ n|pluralize }}">★</button>{% endfor %}
         </form>
+      {% elif entry.rating %}
+        <span class="stars" aria-label="{{ entry.rating }} of 5 stars">{% for n in entry.stars %}<span class="{% if n <= entry.rating %}on{% endif %}">★</span>{% endfor %}</span>
       {% endif %}
-    {% endif %}
+      {% if entry.season and entry.episodes %}<span class="muted small">{% if entry.season_year %}{{ entry.season_year }} · {% endif %}{{ entry.episodes }} episode{{ entry.episodes|pluralize }}</span>{% endif %}
+      {% if entry.status == 'watched' and entry.watched_at %}<span class="muted small">{{ entry.watched_at|date:"j M Y" }}</span>{% endif %}
+    </div>
+    {% if entry.notes %}<div class="note">{{ entry.notes|truncatechars:140 }}</div>{% endif %}
   </div>
-  <div class="meta">
-    {% if show == 'all' %}<span class="badge status-badge {{ entry.status }}">{{ entry.get_status_display }}</span>{% endif %}
-    {% if own and entry.status != 'want' %}
-      <form method="post" action="{% url 'lists:entry_rate' entry.pk %}" class="rate" aria-label="Rating">
-        {% csrf_token %}<input type="hidden" name="next" value="{{ request.get_full_path }}">
-        {% for n in entry.stars %}<button type="submit" name="rating" value="{{ n }}" class="star-btn{% if entry.rating and n <= entry.rating %} on{% endif %}" aria-pressed="{% if entry.rating == n %}true{% else %}false{% endif %}" aria-label="{{ n }} star{{ n|pluralize }}">★</button>{% endfor %}
-      </form>
-    {% elif entry.rating %}
-      <span class="stars" aria-label="{{ entry.rating }} of 5 stars">{% for n in entry.stars %}<span class="{% if n <= entry.rating %}on{% endif %}">★</span>{% endfor %}</span>
-    {% endif %}
-    {% if entry.status == 'watched' and entry.watched_at %}<span class="muted small">{{ entry.watched_at|date:"j M Y" }}</span>{% endif %}
-  </div>
-  {% if entry.notes %}<div class="note">{{ entry.notes|truncatechars:140 }}</div>{% endif %}
 </div>

@@ -5,6 +5,7 @@ All deployment-specific values come from environment variables so the same
 image can run locally and on the NAS.
 """
 import os
+from decimal import Decimal
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -96,7 +97,7 @@ DATABASES = {
 
 AUTH_USER_MODEL = "accounts.User"
 LOGIN_URL = "accounts:login"
-LOGIN_REDIRECT_URL = "lists:movies"
+LOGIN_REDIRECT_URL = "lists:home"
 LOGOUT_REDIRECT_URL = "accounts:login"
 
 # Stay logged in for a long time (default 90 days).
@@ -153,6 +154,21 @@ DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "popcorn@localhost")
 REGISTRATION_OPEN = env_bool("REGISTRATION_OPEN", True)
 # Address of the app, for links in emails; defaults to the first CSRF_TRUSTED_ORIGINS entry.
 SITE_URL = os.environ.get("SITE_URL", "")
+
+# The Movie Database (https://www.themoviedb.org/settings/api): search, posters, genres and where to
+# stream. Either the API key or the read access token works. Empty: titles are entered by hand.
+TMDB_API_KEY = os.environ.get("TMDB_API_KEY", "")
+TMDB_LANGUAGE = os.environ.get("TMDB_LANGUAGE", "en-US")
+# Country whose streaming services are shown, unless someone picks their own (ISO code, e.g. DE, US).
+WATCH_REGION = os.environ.get("WATCH_REGION", "DE").upper()
+
+# AI for reading imported lists that TMDB alone can't make sense of. Empty key: no AI.
+OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
+AI_MODEL = os.environ.get("AI_MODEL", "gpt-5.4-mini")
+AI_EFFORT = os.environ.get("AI_EFFORT", "low")
+# What AI may cost per day in USD: per person (admins can change it per person) and for all together.
+AI_DAILY_LIMIT_USD = Decimal(os.environ.get("AI_DAILY_LIMIT_USD", "0.10"))
+AI_GLOBAL_DAILY_LIMIT_USD = Decimal(os.environ.get("AI_GLOBAL_DAILY_LIMIT_USD", "1.00"))
 
 LOGGING = {
     "version": 1,

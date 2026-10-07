@@ -141,7 +141,6 @@ form.inline { display: inline; margin: 0; }
 .page-head { display: flex; justify-content: space-between; align-items: center; gap: .75rem; }
 .page-head h2 { display: flex; align-items: center; gap: .4rem; }
 .head-ic { font-size: 1.4rem; }
-.badge.public-badge { background: var(--teal-soft); color: var(--teal); }
 
 /* Adding a title */
 .add-entry { padding: .75rem; }
@@ -243,3 +242,188 @@ a.person-text:hover b { text-decoration: underline; text-decoration-color: var(-
 .segmented a { flex: 1; text-align: center; padding: .4rem .5rem; border-radius: 8px; text-decoration: none; color: var(--muted); font-weight: 600; font-size: .9rem; }
 .segmented a.on { background: var(--card); color: var(--accent); box-shadow: 0 1px 2px rgba(30, 27, 46, .12); }
 .cta { margin-top: 1.5rem; }
+
+/* Posters next to titles */
+.entry-row, .pending-item { display: flex; gap: .75rem; align-items: flex-start; }
+.entry-content { flex: 1; min-width: 0; }
+.poster { flex-shrink: 0; width: 46px; height: 69px; border-radius: 6px; object-fit: cover; background: #e9e7f1; }
+.poster.none { display: flex; align-items: center; justify-content: center; font-size: 1.3rem; opacity: .7; }
+.poster.big { width: 92px; height: 138px; }
+
+/* Genres and streaming services */
+.chips { display: flex; flex-wrap: wrap; gap: .3rem; align-items: center; margin-top: .3rem; }
+.chip {
+  display: inline-flex; align-items: center; gap: .3rem; font-size: .75rem; padding: .05rem .5rem;
+  border-radius: 999px; background: #f0eef6; color: var(--muted);
+}
+.chip img { border-radius: 4px; }
+img.prov { width: 22px; height: 22px; border-radius: 5px; box-shadow: 0 0 0 1px var(--border); }
+img.prov.yours { box-shadow: 0 0 0 2px var(--teal); }
+.chip.prov-name { background: var(--accent-soft); color: var(--accent); }
+.chip.prov-name.yours { background: var(--teal-soft); color: var(--teal); font-weight: 600; }
+
+/* Search above a list, and grouping */
+.list-tools { display: flex; gap: .5rem; margin-bottom: .75rem; }
+.list-tools input[type=search] { flex: 1; min-width: 0; }
+.group-by { flex: 0 0 auto; margin: 0; }
+.group-by select { width: auto; max-width: 11rem; }
+details.group { margin-bottom: .5rem; }
+details.group > summary {
+  display: flex; align-items: center; gap: .5rem; cursor: pointer; list-style: none;
+  padding: .5rem .25rem; font-weight: 700;
+}
+details.group > summary::-webkit-details-marker { display: none; }
+details.group > summary::before { content: "▸"; color: var(--muted); transition: transform .15s; }
+details.group[open] > summary::before { transform: rotate(90deg); }
+details.group > summary .count { margin-left: auto; font-size: .8rem; font-weight: 500; color: var(--muted); }
+@media (prefers-reduced-motion: reduce) { details.group > summary::before { transition: none; } }
+
+/* Finding a title on TMDB as you type */
+.title-search { position: relative; flex: 1; min-width: 0; }
+.suggestions {
+  position: absolute; z-index: 20; left: 0; right: 0; top: calc(100% + 4px); margin: 0; padding: .25rem; list-style: none;
+  background: var(--card); border: 1px solid var(--border); border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(30, 27, 46, .16); max-height: 22rem; overflow-y: auto;
+}
+.add-row .suggestions { right: -7rem; }
+button.suggestion {
+  display: flex; gap: .6rem; align-items: center; width: 100%; text-align: left; min-height: 0;
+  background: none; color: var(--fg); font-weight: 400; padding: .35rem .4rem; border-radius: 8px;
+}
+button.suggestion:hover, button.suggestion:focus-visible { background: var(--accent-soft); outline: none; }
+button.suggestion img, button.suggestion .poster { width: 30px; height: 45px; border-radius: 4px; object-fit: cover; flex-shrink: 0; font-size: 1rem; }
+.suggestion-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.suggestion-text b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* An entry's page */
+.entry-head { display: flex; gap: 1rem; align-items: flex-start; }
+.entry-head h2 { margin-top: 0; margin-bottom: .25rem; }
+.overview { margin: .6rem 0 0; font-size: .92rem; }
+.watch-where { margin-top: .9rem; padding-top: .75rem; border-top: 1px solid var(--border); display: flex; flex-direction: column; gap: .35rem; }
+.watch-where .chips { margin-top: 0; }
+
+/* Manage: import, titles to check, where you watch */
+.tabs a .tab-badge {
+  position: absolute; top: .2rem; left: calc(50% + .45rem); min-width: 1.1rem; padding: 0 .3rem;
+  border-radius: 999px; background: var(--neg); color: #fff; font-size: .65rem; font-weight: 700; line-height: 1.1rem;
+}
+.working { display: flex; gap: .75rem; align-items: center; border-color: var(--accent); }
+.spinner {
+  flex-shrink: 0; width: 1.4rem; height: 1.4rem; border-radius: 50%;
+  border: 3px solid var(--accent-soft); border-top-color: var(--accent); animation: spin 1s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .spinner { animation-duration: 3s; } }
+.pending-item { padding: .75rem 0; border-top: 1px solid var(--border); }
+.pending-item.unsure .entry-title { color: var(--gold); }
+.badge.check-badge { background: var(--gold-soft); color: var(--gold); }
+.pending-form { margin: .4rem 0 0; display: flex; flex-direction: column; gap: .4rem; }
+.pending-form select { min-height: 2.25rem; padding: .3rem .5rem; font-size: .9rem; }
+.pending-row { display: flex; flex-wrap: wrap; gap: .4rem; align-items: center; }
+.pending-row select { width: auto; flex: 1 1 8rem; }
+.research { margin-top: .35rem; }
+.research summary { cursor: pointer; color: var(--accent); }
+.research form { margin-top: .4rem; }
+.line h3 { margin: 0; }
+.service-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(9.5rem, 1fr)); gap: .4rem; }
+.service {
+  display: flex; align-items: center; gap: .45rem; padding: .35rem .5rem; border: 1px solid var(--border);
+  border-radius: 8px; font-size: .85rem; cursor: pointer; min-width: 0;
+}
+.service span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.service img { border-radius: 5px; flex-shrink: 0; }
+.service input { margin: 0; flex-shrink: 0; accent-color: var(--teal); }
+.service:has(input:checked) { border-color: var(--teal); background: var(--teal-soft); font-weight: 600; }
+.service.more { display: none; }
+.services-form { margin-top: 1rem; }
+.refresh { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.refresh p { margin-bottom: 0; }
+.attribution { margin-top: 0; }
+button:disabled { opacity: .5; cursor: default; }
+
+/* My groups: chips above a list, on rows, and in Manage */
+.tag-chips { display: flex; gap: .4rem; overflow-x: auto; margin: -.1rem 0 .6rem; padding-bottom: .15rem; scrollbar-width: none; }
+.tag-chips::-webkit-scrollbar { display: none; }
+.tag-chip {
+  display: inline-flex; align-items: center; gap: .3rem; flex-shrink: 0; white-space: nowrap; min-height: 0;
+  padding: .25rem .7rem; border-radius: 999px; border: 1px dashed var(--border); background: transparent;
+  color: var(--muted); font-size: .82rem; font-weight: 500; text-decoration: none;
+}
+.tag-chip.on { border: 1px solid var(--gold); background: var(--gold-soft); color: var(--gold); font-weight: 600; }
+.tag-chip .count { font-size: .72rem; opacity: .7; }
+button.tag-chip { cursor: pointer; }
+button.tag-chip:hover { border-color: var(--accent); color: var(--accent); }
+.chip.tag { background: var(--gold-soft); color: var(--gold); }
+.tag-pills > div label:has(input:checked) { border-color: var(--gold); background: var(--gold-soft); color: var(--gold); }
+.tag-row { display: flex; gap: .4rem; align-items: center; margin-bottom: .4rem; }
+.tag-row input[name=name] { flex: 1; min-width: 0; }
+.tag-row .emoji-input { flex: 0 0 3.2rem; width: 3.2rem; text-align: center; padding-inline: .3rem; }
+.tag-row .count { min-width: 1.5rem; text-align: right; }
+.tag-row.new { margin-top: .6rem; }
+.suggested { display: flex; flex-wrap: wrap; gap: .35rem; align-items: center; margin-top: .5rem; }
+
+/* Badges with suggestions (genres, where to watch on a title's page) */
+.token-input {
+  position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: .3rem;
+  min-height: 2.75rem; padding: .3rem .4rem; border: 1px solid var(--border); border-radius: 8px;
+  background: #fff; cursor: text;
+}
+.token-input:focus-within { outline: 2px solid var(--accent); }
+.token-input .tokens { display: contents; }
+.token-input > input[type=text] {
+  flex: 1 1 6rem; min-width: 6rem; border: 0; padding: .25rem .3rem; min-height: 0; outline: none; background: transparent;
+}
+.token {
+  display: inline-flex; align-items: center; gap: .3rem; padding: .15rem .2rem .15rem .55rem;
+  border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: .85rem; font-weight: 600;
+}
+.token img { border-radius: 4px; }
+button.token-remove {
+  background: none; color: inherit; min-height: 0; padding: 0 .35rem; font-size: 1.05rem; line-height: 1;
+  font-weight: 400; border-radius: 999px; opacity: .7;
+}
+button.token-remove:hover, button.token-remove:focus-visible { opacity: 1; background: rgba(76, 63, 176, .12); outline: none; }
+.token-input .suggestions button.suggestion { gap: .45rem; padding: .45rem .5rem; }
+.token-input .suggestions button.suggestion img { width: 22px; height: 22px; border-radius: 5px; }
+button.suggestion.active { background: var(--accent-soft); }
+
+/* Seasons of a show */
+.badge.season-badge { background: var(--gold-soft); color: var(--gold); margin-left: .2rem; vertical-align: 1px; }
+.season-line { margin: 0 0 .3rem; }
+.suggestions-heading { padding: .35rem .5rem .2rem; font-size: .8rem; font-weight: 700; color: var(--muted); }
+
+/* Where to watch: TMDB's services in the field (not removable while synced), sync switch, other services */
+.token.locked { background: #f0eef6; color: var(--fg); padding-right: .55rem; }
+/* Inside a form field: stronger than ".field label", which would stack the switch above its text. */
+.field label.sync-row {
+  display: flex; align-items: center; gap: .65rem; position: relative;
+  margin: .6rem 0 0; font-weight: 500; font-size: .92rem;
+}
+.sync-row .muted { font-weight: 400; }
+.own-services { margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--border); }
+.own-services p { margin: .25rem 0 .5rem; }
+.own-service { padding: .35rem 0; border-bottom: 1px solid var(--border); margin: 0; }
+.own-service-add { margin-top: .6rem; }
+
+/* Home */
+.home-section { margin-bottom: 1.5rem; }
+.home-section > h3 { margin: 0 0 .6rem; }
+.to-check { display: flex; justify-content: space-between; align-items: center; border-color: var(--accent); color: inherit; }
+.to-check .go { font-size: 1.4rem; color: var(--accent); }
+.friend-news .line { margin-bottom: .6rem; }
+.tiles { display: flex; gap: .7rem; overflow-x: auto; padding-bottom: .3rem; scroll-snap-type: x proximity; }
+.tile { flex: 0 0 92px; width: 92px; display: flex; flex-direction: column; gap: .2rem; scroll-snap-align: start; color: inherit; }
+.tile-poster { width: 92px; height: 138px; border-radius: 8px; object-fit: cover; background: #e9e7f1; }
+.tile-poster.none { display: flex; align-items: center; justify-content: center; font-size: 1.8rem; opacity: .7; }
+.tile-title { font-size: .82rem; font-weight: 600; line-height: 1.2; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tiny { font-size: .72rem; }
+.tile form { margin: 0; }
+.btn.small.tile-add { width: 100%; justify-content: center; min-height: 1.8rem; padding: .15rem .3rem; font-size: .75rem; }
+.badge.tiny { align-self: flex-start; }
+.more-link { margin: .4rem 0 0; }
+.home-counts { display: grid; grid-template-columns: 1fr 1fr; gap: .75rem; }
+.home-counts .card { display: flex; flex-direction: column; color: inherit; margin-bottom: .75rem; }
+.big-num { font-size: 1.8rem; font-weight: 700; line-height: 1.1; color: var(--accent); }
+.small-head { font-size: .95rem; }
+.badge.new-badge { background: var(--neg); color: #fff; margin-left: .2rem; vertical-align: 1px; }
+.tabs a .tab-badge { left: calc(50% + .35rem); }

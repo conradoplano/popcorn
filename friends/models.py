@@ -51,15 +51,17 @@ def make_friends(a, b):
     return created
 
 
+def incoming_requests(user):
+    """Friend requests waiting for you to accept, from people who can still log in."""
+    return [r for r in FriendRequest.objects.filter(to_email__iexact=user.email).select_related("from_user")
+            if r.from_user.is_active]
+
+
 def unfriend(a, b):
     Friendship.objects.filter(user=a, friend=b).delete()
     Friendship.objects.filter(user=b, friend=a).delete()
 
 
-def can_see(viewer, owner, kind):
-    """Your own lists, your friends' lists, and anyone's list they made public."""
-    if owner.is_public(kind):
-        return True
-    if not viewer.is_authenticated:
-        return False
-    return viewer.pk == owner.pk or are_friends(viewer, owner)
+def can_see(viewer, owner):
+    """Your own lists and your friends' lists."""
+    return viewer.is_authenticated and (viewer.pk == owner.pk or are_friends(viewer, owner))
