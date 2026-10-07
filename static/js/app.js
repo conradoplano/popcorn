@@ -72,19 +72,32 @@
     });
   });
 
-  // --- Search a list as you type. In a grouped list, groups with matches open and the others hide. ---
+  // --- Search a list as you type, ignoring case and accents. In a grouped list, groups with matches open and
+  // the others hide. When nothing matches, a link searches the whole list (all statuses) for the same words. ---
+  const plain = (text) => text.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
   document.querySelectorAll('input[data-filter]').forEach((input) => {
     const rows = document.querySelectorAll(input.dataset.filter);
     const groups = document.querySelectorAll('details.group');
+    const hint = document.querySelector('.search-hint');
     groups.forEach((group) => { group.dataset.open = group.open; });
-    input.addEventListener('input', () => {
-      const words = input.value.toLowerCase().split(/\s+/).filter(Boolean);
-      rows.forEach((row) => { row.hidden = !words.every((w) => row.dataset.search.includes(w)); });
+    const filter = () => {
+      const words = plain(input.value).split(/\s+/).filter(Boolean);
+      let shown = 0;
+      rows.forEach((row) => {
+        row.hidden = !words.every((w) => row.dataset.search.includes(w));
+        if (!row.hidden) shown += 1;
+      });
       groups.forEach((group) => {
         group.hidden = words.length > 0 && !group.querySelector('.entry-row:not([hidden])');
         group.open = words.length > 0 || group.dataset.open === 'true';
       });
-    });
+      if (hint) {
+        hint.hidden = !words.length || shown > 0;
+        hint.querySelector('[data-search-all]').href = `?show=all&q=${encodeURIComponent(input.value.trim())}`;
+      }
+    };
+    input.addEventListener('input', filter);
+    if (input.value) filter();  // arrived with ?q=…
   });
 
   // --- Finding a title on TMDB as you type: <div class="title-search" data-search-url data-kind>. ---

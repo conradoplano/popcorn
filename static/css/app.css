@@ -16,6 +16,8 @@
 }
 
 * { box-sizing: border-box; }
+/* Hidden stays hidden, also for elements laid out with flex or grid (e.g. list rows the search filters out). */
+[hidden] { display: none !important; }
 
 body {
   margin: 0;

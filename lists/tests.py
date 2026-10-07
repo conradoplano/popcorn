@@ -43,6 +43,14 @@ class ListTests(TestCase):
         self.client.post(reverse("lists:movies"), {"title": "dune", "year": "2021"})
         self.assertEqual(Entry.objects.count(), 1)
 
+    def test_search_text_without_accents(self):
+        entry = self.entry("Amélie", year=2001, notes="Café scene", genres=["Comedy"])
+        self.assertEqual(entry.search_text, "amelie 2001  cafe scene comedy")
+        response = self.client.get(reverse("lists:movies"), {"show": "want", "q": "amelie"})
+        self.assertContains(response, 'data-search="amelie 2001  cafe scene comedy"')
+        self.assertContains(response, 'data-filter=".entry-row" value="amelie"')  # searched on arrival
+        self.assertContains(response, "Search all your movies")  # shown by the page when nothing matches
+
     def test_lists_only_show_your_own_entries_of_that_kind(self):
         self.entry("Mine")
         self.entry("My show", kind=Entry.Kind.SHOW)

@@ -1,3 +1,5 @@
+import unicodedata
+
 from django.conf import settings
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
@@ -124,7 +126,9 @@ class Entry(models.Model):
         tags = [self.tag.name] if self.tag_id and "tag" in self._state.fields_cache else []
         words = [self.title, str(self.year or ""), f"season {self.season}" if self.season else "", self.notes,
                  *self.genres, *self.provider_names, *tags]
-        return " ".join(words).lower()
+        # Without accents, like what's typed into the search (see app.js): "amelie" finds "Amélie".
+        text = unicodedata.normalize("NFKD", " ".join(words).lower())
+        return "".join(c for c in text if not unicodedata.combining(c))
 
     def apply_details(self, details):
         """Fills in what TMDB knows. Title and year too, so they're spelled as TMDB has them."""
