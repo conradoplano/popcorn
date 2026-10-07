@@ -215,6 +215,27 @@
     {% endif %}
   </div>
 
+  <div class="card" id="assistants">
+    <h3>🤖 Assistants</h3>
+    <p class="muted">Use {{ site_name }} from Claude, ChatGPT or another assistant that supports MCP: add a custom connector with this address, then log in and allow it.</p>
+    <div class="copy-row">
+      <input type="text" readonly value="{{ mcp_url }}" id="mcp-url" aria-label="MCP address">
+      <button type="button" class="ghost" data-copy="#mcp-url">Copy</button>
+    </div>
+    <p class="muted small">It can read your lists, groups, recommendations and what your friends added and watched, search for titles, add, change and remove titles, and turn down recommendations. It never uses {{ site_name }}'s AI.</p>
+    {% for c in connections %}
+      <div class="person">
+        <div class="person-text">
+          <b>{{ c.client }}</b>
+          <div class="muted small">Connected {{ c.created_at|date:"j M Y" }}{% if c.last_used_at %} · last used {{ c.last_used_at|timesince }} ago{% endif %}</div>
+        </div>
+        <form method="post" action="{% url 'connect:connection_remove' c.pk %}" class="inline" data-confirm="Disconnect {{ c.client }}?">
+          {% csrf_token %}<button type="submit" class="link danger small">Disconnect</button>
+        </form>
+      </div>
+    {% endfor %}
+  </div>
+
   {% if tmdb_enabled %}
     <p class="muted small center attribution">Movie and TV show details from <a href="https://www.themoviedb.org/" target="_blank" rel="noopener">TMDB</a>; this app uses the TMDB API but is not endorsed or certified by TMDB. Where to watch by <a href="https://www.justwatch.com/" target="_blank" rel="noopener">JustWatch</a>.</p>
   {% endif %}

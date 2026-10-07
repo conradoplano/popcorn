@@ -47,6 +47,7 @@ INSTALLED_APPS = [
     "core",
     "lists",
     "friends",
+    "connect",
 ]
 
 SITE_NAME = os.environ.get("SITE_NAME", "Popcorn")

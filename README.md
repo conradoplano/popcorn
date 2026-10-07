@@ -64,6 +64,27 @@ Not built yet: recommendations.
   always can); `AI_DAILY_LIMIT_USD` per person (or their own limit) and `AI_GLOBAL_DAILY_LIMIT_USD` for
   everyone keep it affordable. Without AI, imports still work line by line.
 
+## Assistants (Claude, ChatGPT...)
+
+Popcorn is an MCP server, as Chef is, so an assistant that supports MCP connectors can use someone's lists
+("what should we watch tonight with the kids?", "add Severance season 2", "what has Alex watched lately?").
+
+- **Connect:** Manage → 🤖 Assistants shows the address, e.g. `https://popcorn.example.com/mcp`. In Claude:
+  Settings → Connectors → Add custom connector, paste the address, Connect. The assistant opens Popcorn: log in
+  with the emailed code and allow it. The client ID / secret fields stay empty.
+- **Tools** (`connect/tools.py`): `get_lists`, `search_titles` (TMDB), `get_recommendations`,
+  `get_friends_activity`, `add_title`, `update_title`, `remove_title`, `dismiss_recommendation`. They use the
+  same code as the web pages and only see the connected person's lists and what their friends share with them.
+  Importing and new recommendations aren't offered: they use Popcorn's AI, and the assistant does its own
+  thinking, so it costs Popcorn nothing.
+- **OAuth 2.1** (`connect/oauth.py`, as in Chef): discovery through `/.well-known/oauth-protected-resource` and
+  `/.well-known/oauth-authorization-server`, dynamic client registration (`/oauth/register`, limited per IP;
+  unused registrations are removed after a day), authorization with PKCE (S256) and a consent page, access
+  tokens for an hour, refresh tokens for 60 days (replaced on every use), revocation. Only hashes of codes and
+  tokens are stored. Redirect addresses must be https (or http on localhost).
+- **Disconnect** an assistant in Manage → 🤖 Assistants. A deactivated user's assistants stop working. Each
+  connection may make 120 calls a minute.
+
 ## Login
 
 There are no passwords. A user enters their email and gets a six-digit code (valid 10 minutes).

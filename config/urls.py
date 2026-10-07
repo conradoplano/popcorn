@@ -7,4 +7,5 @@ urlpatterns = [
     path("", include("core.urls")),
     path("", include("lists.urls")),
     path("", include("friends.urls")),
+    path("", include("connect.urls")),
 ]

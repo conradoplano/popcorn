@@ -69,6 +69,8 @@ def manage(request):
         "tmdb_error": error,
         "unlinked": me.entries.filter(tmdb_id__isnull=True).count(),
         "tags": me.tags.annotate(count=Count("entries")),
+        "mcp_url": request.build_absolute_uri(reverse("connect:mcp")),
+        "connections": me.connections.select_related("client"),
         "suggestions": [s for s in SUGGESTED_TAGS if s[1].lower() not in {t.name.lower() for t in me.tags.all()}],
     })
 
