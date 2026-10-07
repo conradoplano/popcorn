@@ -175,6 +175,8 @@ class Import(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="imports")
     purpose = models.CharField(max_length=10, choices=Purpose.choices, default=Purpose.ADD)
     text = models.TextField()
+    # Only movies or only TV shows (empty: both), as chosen when importing.
+    kind = models.CharField(max_length=10, choices=Entry.Kind.choices, blank=True)
     # What the titles become once confirmed: to watch, or already watched, and in which of your groups.
     add_as = models.CharField(max_length=10, choices=Entry.Status.choices, default=Entry.Status.WANT)
     tag = models.ForeignKey(Tag, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")

@@ -141,12 +141,16 @@ def looks_like_prose(text):
 # --- AI ----------------------------------------------------------------------------
 
 
-def ask_ai(user, text):
-    """The titles AI finds in the text: [{"line", "title", "year", "kind", "sure"}, ...]."""
+ONLY = {Entry.Kind.MOVIE: "All of these are movies.", Entry.Kind.SHOW: "All of these are TV shows."}
+
+
+def ask_ai(user, text, only=None):
+    """The titles AI finds in the text: [{"line", "title", "year", "kind", "sure"}, ...].
+    only: "movie" or "show" when the list is said to be only those."""
     response = ai.get_client().responses.create(
         model=settings.AI_MODEL,
         instructions=SYSTEM_PROMPT,
-        input=[{"role": "user", "content": text}],
+        input=[{"role": "user", "content": f"{ONLY[only]}\n\n{text}" if only else text}],
         tools=[SAVE_TITLES_TOOL],
         tool_choice={"type": "function", "name": "save_titles"},
         reasoning={"effort": settings.AI_EFFORT},
@@ -169,7 +173,7 @@ def ask_ai(user, text):
                 "line": " ".join(str(t.get("line") or title).split())[:300],
                 "title": title,
                 "year": year if isinstance(year, int) and 1870 <= year <= 2100 else None,
-                "kind": t.get("kind") if t.get("kind") in ("movie", "show") else None,
+                "kind": only or (t.get("kind") if t.get("kind") in ("movie", "show") else None),
                 "season": t["season"] if isinstance(t.get("season"), int) and 0 < t["season"] <= 500 else None,
                 "sure": bool(t.get("sure")),
             })
@@ -179,15 +183,18 @@ def ask_ai(user, text):
 # --- matching ----------------------------------------------------------------------
 
 
-def match(parsed):
-    """Looks a parsed title up on TMDB: (item fields, sure)."""
+def match(parsed, only=None):
+    """Looks a parsed title up on TMDB: (item fields, sure). only: "movie" or "show" when the list is
+    only those, so nothing else is looked for."""
+    if only:
+        parsed = {**parsed, "kind": only, "season": parsed.get("season") if only == Entry.Kind.SHOW else None}
     item = {"line": parsed["line"], "title": parsed["title"], "year": parsed["year"],
             "kind": parsed["kind"] or Entry.Kind.MOVIE, "season": parsed.get("season"),
             "tmdb_id": None, "poster_path": "", "candidates": []}
     if not tmdb.enabled():
         return item, False
     results = tmdb.search(parsed["title"], parsed["kind"])
-    if not results and parsed["kind"]:
+    if not results and parsed["kind"] and not only:
         results = tmdb.search(parsed["title"])  # the hint may be wrong
     best, sure = lookup.best_match(parsed["title"], parsed["year"], parsed["kind"], results)
     if not sure and parsed.get("whole"):
@@ -223,20 +230,21 @@ def read(job):
     For an update, each item's fields also have the entry_id it's for."""
     note = []
     why_not_ai = ai.blocked(job.user)
+    only = job.kind or None
     if job.purpose == Import.Purpose.LINK:
         parsed = typed_entries(job.user)
     elif looks_like_prose(job.text) and not why_not_ai:
         job.used_ai = True
-        parsed = ask_ai(job.user, job.text)
+        parsed = ask_ai(job.user, job.text, only)
     else:
         parsed = parse(job.text)
-    found = [match(p) for p in parsed]
+    found = [match(p, only) for p in parsed]
 
     # Lines TMDB has no certain match for, or that couldn't be looked up: AI may know what's meant.
     unsure = [i for i, (_, sure) in enumerate(found) if not sure]
     if unsure and not job.used_ai and not why_not_ai:
         job.used_ai = True
-        answers = ask_ai(job.user, "\n".join(found[i][0]["line"] for i in unsure))
+        answers = ask_ai(job.user, "\n".join(found[i][0]["line"] for i in unsure), only)
         by_line = {a["line"].casefold(): a for a in answers}
         for i in unsure:
             answer = by_line.get(found[i][0]["line"].casefold())

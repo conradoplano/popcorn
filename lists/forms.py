@@ -132,6 +132,11 @@ class ImportForm(forms.Form):
             "placeholder": "One per line, e.g.\nDune (2021)\nSeverance\nThe Bear S2\n\nOr paste a message with recommendations.",
         }),
     )
+    kind = forms.ChoiceField(
+        label="The list has", widget=forms.RadioSelect,
+        choices=[(Entry.Kind.MOVIE.value, "Only movies"), (Entry.Kind.SHOW.value, "Only TV shows"), ("both", "Both")],
+        error_messages={"required": "Choose whether these are movies, TV shows or both."},
+    )
     add_as = forms.ChoiceField(
         label="Add them as", initial=Entry.Status.WANT, widget=forms.RadioSelect,
         choices=[(Entry.Status.WANT.value, "Want to watch"), (Entry.Status.WATCHED.value, "Watched")],

@@ -123,8 +123,8 @@ class TitlesTestCase(TestCase):
         self.addCleanup(patcher.stop)
         return client.responses.create
 
-    def do_import(self, text, add_as="want"):
-        return self.client.post(reverse("lists:manage"), {"text": text, "add_as": add_as})
+    def do_import(self, text, add_as="want", kind="both"):
+        return self.client.post(reverse("lists:manage"), {"text": text, "add_as": add_as, "kind": kind})
 
 
 class ParseTests(TestCase):
@@ -394,6 +394,31 @@ class ImportTests(TitlesTestCase):
         self.assertContains(page, "Check and add (3)")
         self.assertEqual(page.context["pending_count"], 3)
 
+    def test_the_list_must_say_what_it_has(self):
+        response = self.client.post(reverse("lists:manage"), {"text": "Dune", "add_as": "want"})
+        self.assertContains(response, "Choose whether these are movies, TV shows or both.")
+        self.assertFalse(Import.objects.exists())
+
+    def test_only_tv_shows(self):
+        # "Dune" alone would be the movie; in a list of shows it's the show (Dune: Prophecy is a guess to check).
+        self.do_import("Dune\nSeverance\nArrival", kind="show")
+        job = Import.objects.get()
+        self.assertEqual(job.kind, "show")
+        items = {p.line: p for p in PendingItem.objects.all()}
+        self.assertEqual({p.kind for p in items.values()}, {"show"})
+        self.assertEqual((items["Dune"].tmdb_id, items["Dune"].sure), (90228, False))
+        self.assertTrue(all(c["kind"] == "show" for c in items["Dune"].candidates))
+        self.assertEqual((items["Severance"].tmdb_id, items["Severance"].sure), (95396, True))
+        self.assertEqual((items["Arrival"].tmdb_id, items["Arrival"].kind), (None, "show"))  # no movies looked for
+        page = self.client.get(reverse("lists:manage"))
+        self.assertNotContains(page, 'aria-label="Movie or TV show"')  # no choosing the kind when adding as typed
+
+    def test_only_movies_ignores_seasons(self):
+        self.do_import("Dune S2\nSeverance", kind="movie")
+        items = {p.line: p for p in PendingItem.objects.all()}
+        self.assertEqual((items["Dune S2"].kind, items["Dune S2"].season, items["Dune S2"].tmdb_id), ("movie", None, 438631))
+        self.assertEqual((items["Severance"].kind, items["Severance"].tmdb_id), ("movie", None))
+
     def test_number_that_is_part_of_the_title(self):
         self.do_import("Blade Runner 2049\nBlade Runner (1982)")
         found = sorted(PendingItem.objects.values_list("title", "year", "sure"))
@@ -475,6 +500,15 @@ class ImportAITests(TitlesTestCase):
         create = self.use_ai()
         self.do_import("Dune (2021)\nSeverance")
         create.assert_not_called()
+
+    def test_ai_is_told_what_the_list_has(self):
+        create = self.use_ai(ai_response([
+            {"line": "Arival", "title": "Arrival", "year": 2016, "kind": "show", "season": None, "sure": True},
+        ]))
+        self.do_import("Arival", kind="movie")
+        self.assertEqual(create.call_args.kwargs["input"][0]["content"], "All of these are movies.\n\nArival")
+        item = PendingItem.objects.get()
+        self.assertEqual((item.kind, item.tmdb_id), ("movie", 329865))
 
     def test_ai_reads_a_message(self):
         self.use_ai(ai_response([
@@ -699,7 +733,7 @@ class TagTests(TitlesTestCase):
         self.assertNotContains(response, "With the kids")
 
     def test_import_into_a_group(self):
-        self.client.post(reverse("lists:manage"), {"text": "Dune (2021)", "add_as": "want", "tag": self.partner.pk})
+        self.client.post(reverse("lists:manage"), {"text": "Dune (2021)", "add_as": "want", "kind": "movie", "tag": self.partner.pk})
         self.client.post(reverse("lists:pending_all"), {"action": "add"})
         self.assertEqual(list(Entry.objects.get().tags.all()), [self.partner])
 

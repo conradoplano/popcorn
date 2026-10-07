@@ -26,8 +26,9 @@ def manage(request):
     importer.expire_stale()
     form = ImportForm(request.POST or None, user=me)
     if request.method == "POST" and form.is_valid():
+        kind = form.cleaned_data["kind"]
         job = Import.objects.create(user=me, text=form.cleaned_data["text"], add_as=form.cleaned_data["add_as"],
-                                    tag=form.cleaned_data["tag"])
+                                    kind="" if kind == "both" else kind, tag=form.cleaned_data["tag"])
         importer.start(job)
         return redirect(manage_url("import"))
 

@@ -59,7 +59,7 @@
                 <input type="hidden" name="choice" value="typed">
               {% endif %}
               <div class="pending-row">
-                {% if item.choice == 'typed' and not item.entry_id %}
+                {% if item.choice == 'typed' and not item.entry_id and not item.source.kind %}
                   <select name="kind" data-autosubmit aria-label="Movie or TV show">
                     <option value="movie"{% if item.kind == 'movie' %} selected{% endif %}>Movie</option>
                     <option value="show"{% if item.kind == 'show' %} selected{% endif %}>TV show</option>
@@ -83,7 +83,7 @@
                 <summary class="small">Search for another title</summary>
                 <form method="post" action="{% url 'lists:pending_pick' item.pk %}" autocomplete="off">
                   {% csrf_token %}<input type="hidden" name="tmdb_id"><input type="hidden" name="kind">
-                  <div class="title-search" data-search-url="{% url 'lists:search' %}">
+                  <div class="title-search" data-search-url="{% url 'lists:search' %}"{% if item.source.kind %} data-kind="{{ item.source.kind }}"{% elif item.entry_id %} data-kind="{{ item.entry.kind }}"{% endif %}>
                     <input type="search" name="q" value="{{ item.title }}" aria-label="Search TMDB" data-search-now>
                     <ul class="suggestions" hidden></ul>
                   </div>
@@ -110,6 +110,7 @@
       {% csrf_token %}
       {{ form.non_field_errors }}
       <div class="field">{{ form.text }}{{ form.text.errors }}</div>
+      <div class="field pills">{{ form.kind.label_tag }}{{ form.kind }}{{ form.kind.errors }}</div>
       <div class="field pills">{{ form.add_as.label_tag }}{{ form.add_as }}</div>
       {% if tags %}<div class="field">{{ form.tag.label_tag }}{{ form.tag }}</div>{% endif %}
       <button type="submit" class="wide"{% if running %} disabled{% endif %}>Find these titles</button>
