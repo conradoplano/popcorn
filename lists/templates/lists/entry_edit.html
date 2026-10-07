@@ -54,7 +54,21 @@
     </form>
   {% endif %}
 
+  <form method="post" action="{% url 'lists:entry_quick' entry.pk %}" class="card stack autosave" data-save-url="{% url 'lists:entry_quick' entry.pk %}">
+    {% csrf_token %}
+    <div class="field pills">{{ quick.status.label_tag }}{{ quick.status }}</div>
+    <div class="field pills rating-pills">{{ quick.rating.label_tag }}{{ quick.rating }}</div>
+    {% if quick.tag.field.queryset %}
+      <div class="field pills tag-pills">{{ quick.tag.label_tag }}{{ quick.tag }}</div>
+    {% else %}
+      <p class="muted small">Sort your titles into your own groups, like “With the kids”: <a href="{% url 'lists:manage' %}#groups">create groups</a>.</p>
+    {% endif %}
+    <p class="muted small saved-note" aria-live="polite">Saved as soon as you pick.</p>
+    <noscript><button type="submit" class="wide">Save</button></noscript>
+  </form>
+
   <div class="card">
+    <h3>Details</h3>
     <form method="post" class="stack">
       {% csrf_token %}
       {{ form.non_field_errors }}
@@ -64,13 +78,6 @@
       </div>
       {% if form.season %}
         <div class="field">{{ form.season.label_tag }}{{ form.season }}<div class="muted small">{{ form.season.help_text }} Each season is a title of its own, with its own status.</div>{{ form.season.errors }}</div>
-      {% endif %}
-      <div class="field pills">{{ form.status.label_tag }}{{ form.status }}{{ form.status.errors }}</div>
-      <div class="field pills rating-pills">{{ form.rating.label_tag }}{{ form.rating }}{{ form.rating.errors }}</div>
-      {% if form.tags.field.queryset %}
-        <div class="field pills tag-pills">{{ form.tags.label_tag }}{{ form.tags }}{{ form.tags.errors }}</div>
-      {% else %}
-        <p class="muted small">Sort your titles into your own groups, like “With the kids”: <a href="{% url 'lists:manage' %}#groups">create groups</a>.</p>
       {% endif %}
       <div class="field">
         {{ form.provider_names.label_tag }}
@@ -93,7 +100,7 @@
       {{ provider_options|json_script:"provider-options" }}
       {{ genre_options|json_script:"genre-options" }}
       <div class="field">{{ form.notes.label_tag }}{{ form.notes }}{{ form.notes.errors }}</div>
-      <button type="submit" class="wide">Save</button>
+      <button type="submit" class="wide">Save details</button>
     </form>
     <p class="muted small">Added {{ entry.added_at|date:"j M Y" }}{% if entry.watched_at %} · watched {{ entry.watched_at|date:"j M Y" }}{% endif %}</p>
   </div>

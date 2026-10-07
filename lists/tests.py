@@ -84,11 +84,40 @@ class ListTests(TestCase):
     def test_edit(self):
         entry = self.entry(kind=Entry.Kind.SHOW)
         response = self.client.post(reverse("lists:entry", args=[entry.pk]), {
-            "title": "Dune: Prophecy", "year": "2024", "status": "watching", "rating": "3", "notes": "Episode 4",
+            "title": "Dune: Prophecy", "year": "2024", "status": "watched", "rating": "3", "notes": "Episode 4",
         })
-        self.assertRedirects(response, reverse("lists:shows") + "?show=watching")
+        self.assertRedirects(response, reverse("lists:shows") + "?show=want")
         entry.refresh_from_db()
-        self.assertEqual((entry.title, entry.status, entry.rating, entry.notes), ("Dune: Prophecy", "watching", 3, "Episode 4"))
+        # Status and rating aren't part of the details: they're saved by themselves (see test_quick_*).
+        self.assertEqual((entry.title, entry.status, entry.rating, entry.notes), ("Dune: Prophecy", "want", None, "Episode 4"))
+
+    def quick(self, entry, field, value):
+        return self.client.post(reverse("lists:entry_quick", args=[entry.pk]), {"field": field, "value": value},
+                                headers={"X-Requested-With": "fetch"})
+
+    def test_quick_status_and_rating(self):
+        entry = self.entry(kind=Entry.Kind.SHOW)
+        self.assertEqual(self.quick(entry, "status", "watching").json(), {"status": "watching", "rating": "", "tag": ""})
+        # Rating something not watched yet marks it watched; the answer says so, for the page to show.
+        entry.status = "want"
+        entry.save()
+        self.assertEqual(self.quick(entry, "rating", "4").json(), {"status": "watched", "rating": 4, "tag": ""})
+        self.assertEqual(self.quick(entry, "rating", "").json()["rating"], "")
+        entry.refresh_from_db()
+        self.assertEqual((entry.status, entry.rating), ("watched", None))
+        self.assertEqual(self.quick(entry, "status", "watching!").status_code, 400)
+        self.assertEqual(self.quick(entry, "rating", "9").status_code, 400)
+
+    def test_quick_without_javascript(self):
+        entry = self.entry()
+        response = self.client.post(reverse("lists:entry_quick", args=[entry.pk]), {"status": "watched", "rating": "5", "tag": ""})
+        self.assertRedirects(response, reverse("lists:entry", args=[entry.pk]))
+        entry.refresh_from_db()
+        self.assertEqual((entry.status, entry.rating), ("watched", 5))
+
+    def test_quick_is_only_for_your_own(self):
+        entry = self.entry(user=self.other)
+        self.assertEqual(self.quick(entry, "status", "watched").status_code, 404)
 
     def test_cannot_touch_someone_elses_entry(self):
         entry = self.entry(user=self.other)

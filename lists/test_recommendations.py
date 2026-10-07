@@ -148,7 +148,7 @@ class RecommendationTests(TitlesTestCase):
         arrival = Recommendation.objects.get(title="Arrival")
         self.client.post(reverse("lists:recommendation_add", args=[arrival.pk]), {"status": "watched"})
         entry = self.user.entries.get(tmdb_id=329865)
-        self.assertEqual((entry.status, list(entry.tags.all())), ("watched", [self.partner]))
+        self.assertEqual((entry.status, entry.tag), ("watched", self.partner))
         severance = Recommendation.objects.get(title="Severance")
         self.client.post(reverse("lists:recommendation_add", args=[severance.pk]), {"status": "want"})
         self.assertEqual(self.user.entries.get(tmdb_id=95396).status, "want")

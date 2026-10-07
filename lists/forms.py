@@ -27,11 +27,38 @@ def split_names(text):
     return names
 
 
-class EntryForm(forms.ModelForm):
+class QuickForm(forms.ModelForm):
+    """Status, rating and group on a title's page: each saved as soon as it's picked (see views.entry_quick)."""
+
     rating = forms.TypedChoiceField(
         choices=[("", "Not rated")] + [(n, "★" * n) for n in range(1, 6)],
         coerce=int, empty_value=None, required=False, widget=forms.RadioSelect,
     )
+
+    class Meta:
+        model = Entry
+        fields = ["status", "rating", "tag"]
+        widgets = {"status": forms.RadioSelect, "tag": forms.RadioSelect}
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.fields["status"].choices = [(s.value, s.label) for s in Entry.statuses_for(self.instance.kind)]
+        self.fields["tag"].queryset = Tag.objects.filter(user=self.instance.user)
+        self.fields["tag"].label = "My group"
+        self.fields["tag"].empty_label = "No group"
+
+    def save(self, commit=True):
+        entry = super().save(commit=False)
+        entry.set_status(self.cleaned_data["status"])
+        entry.set_rating(self.cleaned_data["rating"])
+        if commit:
+            entry.save()
+        return entry
+
+
+class EntryForm(forms.ModelForm):
+    """The rest of a title's page, saved with its Save button."""
+
     genre_names = forms.CharField(
         label="Genres", required=False, max_length=300,
         widget=forms.TextInput(attrs={"placeholder": "e.g. Comedy, Drama", "autocomplete": "off", "aria-label": "Genres"}),
@@ -44,10 +71,8 @@ class EntryForm(forms.ModelForm):
 
     class Meta:
         model = Entry
-        fields = ["title", "year", "season", "status", "rating", "tags", "providers_sync", "notes"]
+        fields = ["title", "year", "season", "providers_sync", "notes"]
         widgets = {
-            "status": forms.RadioSelect,
-            "tags": forms.CheckboxSelectMultiple,
             "notes": forms.Textarea(attrs={"rows": 3, "placeholder": "Who recommended it, what you thought…"}),
         }
 
@@ -75,10 +100,7 @@ class EntryForm(forms.ModelForm):
                 field.widget = forms.NumberInput(attrs={"placeholder": "Whole show", "inputmode": "numeric"})
         # Logos of known streaming services, for ones entered by hand: {"netflix": "/logo.jpg"}.
         self.logos = logos or {}
-        self.fields["status"].choices = [(s.value, s.label) for s in Entry.statuses_for(self.instance.kind)]
         self.fields["title"].widget.attrs["autocomplete"] = "off"
-        self.fields["tags"].queryset = Tag.objects.filter(user=self.instance.user)
-        self.fields["tags"].label = "My groups"
         self.initial["genre_names"] = ", ".join(self.instance.genres)
         # TMDB's services are shown (and kept) separately while synced; this field is the ones added by hand.
         self.initial["provider_names"] = ", ".join(p["name"] for p in self.instance.own_providers)
@@ -99,8 +121,6 @@ class EntryForm(forms.ModelForm):
 
     def save(self, commit=True):
         entry = super().save(commit=False)
-        entry.set_status(self.cleaned_data["status"])
-        entry.set_rating(self.cleaned_data["rating"])
         entry.genres = split_names(self.cleaned_data["genre_names"])
         names = split_names(self.cleaned_data["provider_names"])
         logos = {**self.logos, **{p["name"].lower(): p["logo"] for p in entry.watch if p["logo"]}}
@@ -120,7 +140,6 @@ class EntryForm(forms.ModelForm):
                 user.save(update_fields=["own_services"])
         if commit:
             entry.save()
-            self.save_m2m()
         return entry
 
 

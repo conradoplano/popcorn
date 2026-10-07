@@ -5,11 +5,10 @@ from .models import AIUsage, Entry, Import, PendingItem, Recommendation, Recomme
 
 @admin.register(Entry)
 class EntryAdmin(admin.ModelAdmin):
-    list_display = ("title", "year", "kind", "status", "rating", "tmdb_id", "user", "added_at")
+    list_display = ("title", "year", "kind", "status", "rating", "tag", "tmdb_id", "user", "added_at")
     list_filter = ("kind", "status", "rating")
     search_fields = ("title", "user__email", "user__name")
     raw_id_fields = ("user",)
-    filter_horizontal = ("tags",)
 
 
 @admin.register(Tag)

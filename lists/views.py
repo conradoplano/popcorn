@@ -14,7 +14,7 @@ from friends import activity
 from friends.models import Friendship, can_see, incoming_requests
 
 from . import lookup, recommender, tmdb
-from .forms import AddEntryForm, EntryForm
+from .forms import AddEntryForm, EntryForm, QuickForm
 from .models import Entry, Recommendation, RecommendationSet, Tag, poster_url
 
 KIND_PAGES = {Entry.Kind.MOVIE: "lists:movies", Entry.Kind.SHOW: "lists:shows"}
@@ -116,7 +116,7 @@ def tag_chips(entries, show, tags):
     if not tags:
         return []
     shown = entries if show == SHOW_ALL else entries.filter(status=show)
-    counts = dict(shown.values_list("tags").annotate(n=Count("id", distinct=True)).order_by())
+    counts = dict(shown.values_list("tag").annotate(n=Count("id")).order_by())
     return ([(TAG_ALL, "All", shown.count())] + [(str(t.pk), str(t), counts.get(t.pk, 0)) for t in tags]
             + [(TAG_NONE, "In no group", counts.get(None, 0))])
 
@@ -160,8 +160,9 @@ def recommendation_add(request, pk):
     if status not in (Entry.Status.WANT, Entry.Status.WATCHED):
         raise Http404("No status")
     entry = add(request, rec.kind, status, rec.title, rec.year, rec.tmdb_id)
-    if rec.tag_id:
-        entry.tags.add(rec.tag_id)
+    if rec.tag_id and not entry.tag_id:
+        entry.tag_id = rec.tag_id
+        entry.save(update_fields=["tag"])
     rec.state = Recommendation.State.ADDED
     rec.save(update_fields=["state"])
     return redirect(reverse("lists:home") + "#recommended")
@@ -213,8 +214,9 @@ def _list(request, kind):
     form = AddEntryForm(request.POST or None)
     if request.method == "POST" and form.is_valid():
         entry = add(request, kind, Entry.Status.WANT if show == SHOW_ALL else show, **form.cleaned_data)
-        if isinstance(tag, Tag):
-            entry.tags.add(tag)  # added while looking at one of your groups: it goes into that group
+        if isinstance(tag, Tag) and entry.tag_id != tag.pk:
+            entry.tag = tag  # added while looking at one of your groups: it goes into that group
+            entry.save(update_fields=["tag"])
         return redirect(request.get_full_path())
 
     lookup.refresh_if_stale(request.user)
@@ -222,11 +224,11 @@ def _list(request, kind):
     entries = request.user.entries.filter(kind=kind)
     chips = tag_chips(entries, show, tags)
     if isinstance(tag, Tag):
-        entries = entries.filter(tags=tag)
+        entries = entries.filter(tag=tag)
     elif tag == TAG_NONE:
-        entries = entries.filter(tags__isnull=True)
+        entries = entries.filter(tag__isnull=True)
     rows, pills = filtered(entries, kind, show)
-    rows = rows.prefetch_related("tags")
+    rows = rows.select_related("tag")
     return render(request, "lists/list.html", {
         "tag": str(tag.pk) if isinstance(tag, Tag) else tag,
         "tag_name": str(tag) if isinstance(tag, Tag) else "",
@@ -325,7 +327,7 @@ def entry_edit(request, pk):
         messages.success(request, f"Saved {entry}.")
         return redirect(reverse(KIND_PAGES[entry.kind]) + f"?show={entry.status}")
     return render(request, "lists/entry_edit.html", {
-        "entry": entry, "form": form, "search_enabled": tmdb.enabled(),
+        "entry": entry, "form": form, "quick": QuickForm(instance=entry), "search_enabled": tmdb.enabled(),
         "services": {s.lower() for s in request.user.all_services},
         "genre_options": [{"name": g, "logo": ""} for g in genre_options],
         "provider_options": provider_options,
@@ -359,6 +361,31 @@ def suggestions(user, kind):
     mine = {s.lower(): i for i, s in enumerate(user.all_services)}
     providers = sorted(providers + extra, key=lambda p: (p["name"].lower() not in mine, mine.get(p["name"].lower(), 0)))
     return genres, [{"name": p["name"], "logo": p.get("logo", "")} for p in providers], known
+
+
+@login_required
+@require_POST
+def entry_quick(request, pk):
+    """Status, rating and group from a title's page, saved as soon as one is picked: the page sends just
+    that one (field and value) and gets all three back, as rating something can mark it watched.
+    Without JavaScript the whole form is sent with its own button."""
+    entry = get_object_or_404(Entry, pk=pk, user=request.user)
+    data = {"status": entry.status, "rating": entry.rating or "", "tag": entry.tag_id or ""}
+    if request.POST.get("field") in data:
+        data[request.POST["field"]] = request.POST.get("value", "")
+    else:
+        data.update({k: request.POST.get(k, v) for k, v in data.items()})
+    form = QuickForm(data, instance=entry)
+    if not form.is_valid():
+        if _fetch(request):
+            return JsonResponse({"errors": form.errors}, status=400)
+        messages.error(request, "That couldn't be saved.")
+        return redirect("lists:entry", entry.pk)
+    form.save()
+    if _fetch(request):
+        return JsonResponse({"status": entry.status, "rating": entry.rating or "", "tag": entry.tag_id or ""})
+    messages.success(request, f"Saved {entry}.")
+    return redirect("lists:entry", entry.pk)
 
 
 @login_required

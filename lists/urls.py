@@ -16,6 +16,7 @@ urlpatterns = [
     path("entry/<int:pk>/status/", views.entry_status, name="entry_status"),
     path("entry/<int:pk>/copy/", views.entry_copy, name="entry_copy"),
     path("entry/<int:pk>/link/", views.entry_link, name="entry_link"),
+    path("entry/<int:pk>/quick/", views.entry_quick, name="entry_quick"),
     path("entry/<int:pk>/refresh/", views.entry_refresh, name="entry_refresh"),
     path("recommendations/new/", views.recommendations_new, name="recommendations_new"),
     path("recommendations/<int:pk>/status/", views.recommendations_status, name="recommendations_status"),

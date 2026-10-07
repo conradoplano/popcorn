@@ -6,7 +6,7 @@ from django.utils import timezone
 
 class Tag(models.Model):
     """One of someone's own groups, e.g. "With the kids" or "Just me". The same groups are used for
-    movies and TV shows; a title can be in several. Private: friends and public lists don't show them."""
+    movies and TV shows; a title is in one at most. Private: friends don't see them."""
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="tags")
     name = models.CharField(max_length=40)
@@ -63,7 +63,8 @@ class Entry(models.Model):
     own_providers = models.JSONField("where to watch (added)", default=list, blank=True)
     # Off: TMDB's are no longer updated; they became own_providers to change freely.
     providers_sync = models.BooleanField("keep where to watch updated from TMDB", default=True)
-    tags = models.ManyToManyField(Tag, blank=True, related_name="entries")
+    tag = models.ForeignKey(Tag, null=True, blank=True, on_delete=models.SET_NULL, related_name="entries",
+                            verbose_name="group")
 
     class Meta:
         ordering = ["-added_at"]
@@ -121,8 +122,8 @@ class Entry(models.Model):
 
     @property
     def search_text(self):
-        """What the search box above a list looks through. Tags only on your own list (prefetched there)."""
-        tags = [t.name for t in self.tags.all()] if "tags" in getattr(self, "_prefetched_objects_cache", {}) else []
+        """What the search box above a list looks through. The group only on your own list (loaded there)."""
+        tags = [self.tag.name] if self.tag_id and "tag" in self._state.fields_cache else []
         words = [self.title, str(self.year or ""), f"season {self.season}" if self.season else "", self.notes,
                  *self.genres, *self.provider_names, *tags]
         return " ".join(words).lower()

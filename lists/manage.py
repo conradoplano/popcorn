@@ -115,9 +115,8 @@ def confirm(items):
             entry = Entry(user=item.user, kind=item.kind, title=item.title, year=item.year, season=season,
                           tmdb_id=item.tmdb_id, poster_path=item.poster_path)
             entry.set_status(item.status if item.status in Entry.statuses_for(item.kind) else Entry.Status.WANT)
+            entry.tag_id = item.source.tag_id if item.source_id else None
             entry.save()
-            if item.source_id and item.source.tag_id:
-                entry.tags.add(item.source.tag_id)
             added.append(entry.pk)
         item.delete()
     if (added or matched) and tmdb.enabled():

@@ -679,35 +679,35 @@ class TagTests(TitlesTestCase):
         patcher.start()
         self.addCleanup(patcher.stop)
 
-    def entry(self, title, *tags, kind="movie", user=None):
-        entry = Entry.objects.create(user=user or self.user, kind=kind, title=title)
-        entry.tags.set(tags)
-        return entry
+    def entry(self, title, tag=None, kind="movie", user=None):
+        return Entry.objects.create(user=user or self.user, kind=kind, title=title, tag=tag)
 
     def titles(self, response):
         return sorted(e.title for e in response.context["rows"])
 
     def test_filter_a_list_by_group(self):
         self.entry("Frozen", self.kids)
-        self.entry("Coco", self.kids, self.partner)
+        self.entry("Coco", self.kids)
+        self.entry("Before Sunrise", self.partner)
         self.entry("Heat")
         response = self.client.get(reverse("lists:movies"), {"tag": self.kids.pk})
         self.assertEqual(self.titles(response), ["Coco", "Frozen"])
         self.assertEqual(response.context["pills"][0], ("want", "Want to watch", 2))
         self.assertEqual(response.context["tag_chips"], [
-            ("all", "All", 3), (str(self.kids.pk), "👪 With the kids", 2),
+            ("all", "All", 4), (str(self.kids.pk), "👪 With the kids", 2),
             (str(self.partner.pk), "With my partner", 1), ("none", "In no group", 1),
         ])
         # Remembered, also for the TV show list: the groups are the same for both.
         self.entry("Bluey", self.kids, kind="show")
         self.assertEqual(self.titles(self.client.get(reverse("lists:shows"))), ["Bluey"])
         self.assertEqual(self.titles(self.client.get(reverse("lists:movies"), {"tag": "none"})), ["Heat"])
-        self.assertEqual(self.titles(self.client.get(reverse("lists:movies"), {"tag": "all"})), ["Coco", "Frozen", "Heat"])
+        self.assertEqual(self.titles(self.client.get(reverse("lists:movies"), {"tag": "all"})),
+                         ["Before Sunrise", "Coco", "Frozen", "Heat"])
 
     def test_adding_while_a_group_is_chosen_puts_it_in_the_group(self):
         self.client.get(reverse("lists:movies"), {"tag": self.kids.pk})
         self.client.post(reverse("lists:movies"), {"title": "Moana"})
-        self.assertEqual(list(Entry.objects.get().tags.all()), [self.kids])
+        self.assertEqual(Entry.objects.get().tag, self.kids)
 
     def test_someone_elses_group_is_ignored(self):
         other = User.objects.create_user(email="alex@example.com")
@@ -724,13 +724,20 @@ class TagTests(TitlesTestCase):
         entry = self.entry("Coco")
         other = User.objects.create_user(email="alex@example.com")
         theirs = Tag.objects.create(user=other, name="Theirs")
-        data = {"title": "Coco", "year": "", "status": "want", "rating": "", "notes": "", "genre_names": "",
-                "provider_names": "", "tags": [self.kids.pk, self.partner.pk]}
-        self.client.post(reverse("lists:entry", args=[entry.pk]), data)
-        self.assertEqual(set(entry.tags.all()), {self.kids, self.partner})
-        response = self.client.post(reverse("lists:entry", args=[entry.pk]), {**data, "tags": [theirs.pk]})
-        self.assertEqual(response.status_code, 200)  # not one of your groups: the form says so
-        self.assertEqual(set(entry.tags.all()), {self.kids, self.partner})
+        url = reverse("lists:entry_quick", args=[entry.pk])
+        fetch = {"X-Requested-With": "fetch"}
+        self.assertEqual(self.client.post(url, {"field": "tag", "value": self.kids.pk}, headers=fetch).json()["tag"], self.kids.pk)
+        # One group at most: picking another one moves it.
+        self.client.post(url, {"field": "tag", "value": self.partner.pk}, headers=fetch)
+        entry.refresh_from_db()
+        self.assertEqual(entry.tag, self.partner)
+        self.assertEqual(self.client.post(url, {"field": "tag", "value": theirs.pk}, headers=fetch).status_code, 400)
+        self.client.post(url, {"field": "tag", "value": ""}, headers=fetch)
+        entry.refresh_from_db()
+        self.assertIsNone(entry.tag)
+        page = self.client.get(reverse("lists:entry", args=[entry.pk]))
+        self.assertContains(page, "No group")
+        self.assertNotContains(page, "Theirs")
 
     def test_groups_are_private(self):
         from friends.models import make_friends
@@ -746,7 +753,7 @@ class TagTests(TitlesTestCase):
     def test_import_into_a_group(self):
         self.client.post(reverse("lists:manage"), {"text": "Dune (2021)", "add_as": "want", "kind": "movie", "tag": self.partner.pk})
         self.client.post(reverse("lists:pending_all"), {"action": "add"})
-        self.assertEqual(list(Entry.objects.get().tags.all()), [self.partner])
+        self.assertEqual(Entry.objects.get().tag, self.partner)
 
     def test_manage_groups(self):
         self.client.post(reverse("lists:tag_add"), {"name": "  Christmas ", "emoji": "🎄"})

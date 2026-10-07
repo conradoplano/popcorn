@@ -35,8 +35,8 @@
         {% endif %}
       {% endif %}
     </div>
-    {% if own and entry.tags.all %}
-      <div class="chips">{% for t in entry.tags.all %}<span class="chip tag">{{ t }}</span>{% endfor %}</div>
+    {% if own and entry.tag %}
+      <div class="chips"><span class="chip tag">{{ entry.tag }}</span></div>
     {% endif %}
     {% if entry.genres or entry.watch %}
       <div class="chips">

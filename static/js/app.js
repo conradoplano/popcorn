@@ -38,6 +38,40 @@
     }
   });
 
+  // --- Choices saved as soon as they're picked: <form class="autosave" data-save-url> of radio buttons, e.g. a
+  // title's status, rating and group. Sends the one that changed; the answer has all of them (rating
+  // something marks it watched), and the page shows that. ---
+  document.querySelectorAll('form.autosave[data-save-url]').forEach((form) => {
+    const note = form.querySelector('.saved-note');
+    const hint = note ? note.textContent : '';
+    const show = (values) => Object.entries(values).forEach(([name, value]) => {
+      const radio = [...form.querySelectorAll(`input[name="${name}"]`)].find((r) => r.value === String(value));
+      if (radio) radio.checked = true;
+    });
+    let saved = Object.fromEntries([...new FormData(form)].filter(([name]) => name !== 'csrfmiddlewaretoken'));
+    form.addEventListener('change', async (event) => {
+      const data = new FormData();
+      data.set('csrfmiddlewaretoken', form.elements.csrfmiddlewaretoken.value);
+      data.set('field', event.target.name);
+      data.set('value', event.target.value);
+      let message;
+      try {
+        const response = await fetch(form.dataset.saveUrl, { method: 'POST', body: data, headers: fetchHeaders });
+        if (!response.ok) throw new Error(response.status);
+        saved = await response.json();
+        show(saved);
+        message = 'Saved ✓';
+      } catch (e) {
+        show(saved);
+        message = "Couldn't save, please try again.";
+      }
+      if (!note) return;
+      note.textContent = message;
+      clearTimeout(form.noteTimer);
+      form.noteTimer = setTimeout(() => { note.textContent = hint; }, 2500);
+    });
+  });
+
   // --- Search a list as you type. In a grouped list, groups with matches open and the others hide. ---
   document.querySelectorAll('input[data-filter]').forEach((input) => {
     const rows = document.querySelectorAll(input.dataset.filter);

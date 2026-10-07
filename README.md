@@ -25,11 +25,12 @@ The name is set with `SITE_NAME`, so renaming the app only takes one environment
   result adds it with its poster, genres and where to stream it (or press Enter to add it as typed). It goes
   into the list you're looking at. A TV show can be added as the whole show or as one season (each its own
   title). **Group by** genre or where to watch (your own streaming services first); each title is under one
-  heading. **My groups** (e.g. "With the kids") filter both lists. **✓ Watched** moves a title to what you've seen; tap the stars to rate it from 1 to 5 (tap the
+  heading. **My groups** (e.g. "With the kids", one per title) filter both lists. **✓ Watched** moves a title to what you've seen; tap the stars to rate it from 1 to 5 (tap the
   same star again to clear it). Rating something you haven't watched yet marks it as watched. A title's page
-  has its overview, season, status, rating, groups, notes, genres and where to watch (TMDB's are kept up to
-  date unless switched off for that title; services you add are kept), finds a title typed by hand on TMDB,
-  and removes it.
+  has its overview, then status, rating and group, each saved as soon as it's picked. Below, the details are
+  saved with a button: title, year, season, where to watch (TMDB's are kept up to date unless switched off for
+  that title; services you add are kept), genres and notes. It also finds a title typed by hand on TMDB, and
+  removes it.
 - **👥 Friends**: friends see each other's movie and TV show lists, and nothing else: there are no comments
   or likes, and lists are never public. The Friends tab shows a badge for requests waiting for you. Each
   friend shows how many titles are new since your last visit and when they were last active; on their list

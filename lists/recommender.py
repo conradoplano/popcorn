@@ -84,9 +84,9 @@ KINDS = [(Entry.Kind.MOVIE, "movies"), (Entry.Kind.SHOW, "shows")]
 
 def fingerprint(user):
     """Someone's lists, groups and services in short: when it changes, a new day brings new recommendations."""
-    entries = sorted(map(str, user.entries.values_list("kind", "tmdb_id", "title", "year", "season", "status", "rating")))
-    tags = sorted(map(str, Entry.tags.through.objects.filter(entry__user=user).values_list("entry_id", "tag_id")))
-    data = [entries, tags, sorted(user.tags.values_list("name", flat=True)),
+    entries = sorted(map(str, user.entries.values_list("kind", "tmdb_id", "title", "year", "season", "status", "rating",
+                                                       "tag_id")))
+    data = [entries, sorted(user.tags.values_list("name", flat=True)),
             sorted(user.services), sorted(user.own_services), user.region]
     return hashlib.sha256(json.dumps(data).encode()).hexdigest()
 
@@ -200,9 +200,8 @@ def _entry_line(entry):
         line += f", season {entry.season}"
     if entry.rating:
         line += f", {entry.rating}★"
-    tags = [t.name for t in entry.tags.all()]
-    if tags:
-        line += f" [{', '.join(tags)}]"
+    if entry.tag:
+        line += f" [{entry.tag.name}]"
     return line
 
 
@@ -217,7 +216,7 @@ def prompt(user, pools, dismissed, recent):
         parts.append("They also watch on: " + ", ".join(user.own_services) + ".")
     parts.append("Their groups: " + (", ".join(tags) if tags else "none") + ".")
     for kind, label in KINDS:
-        entries = user.entries.filter(kind=kind).prefetch_related("tags").order_by("-added_at")
+        entries = user.entries.filter(kind=kind).select_related("tag").order_by("-added_at")
         for status, title in [(Entry.Status.WATCHED, "watched"), (Entry.Status.WATCHING, "are watching"),
                               (Entry.Status.WANT, "want to watch")]:
             listed = [_entry_line(e) for e in entries.filter(status=status)[:MAX_LISTED]]
