@@ -149,8 +149,8 @@ def genres(kind):
 
 
 def services(region):
-    """The streaming services TMDB knows in a country, most popular first: [{"name", "logo"}, ...]."""
-    cache_key = f"tmdb:services:{region}"
+    """The streaming services TMDB knows in a country, most popular first: [{"name", "logo", "id"}, ...]."""
+    cache_key = f"tmdb:services:v2:{region}"
     found = cache.get(cache_key)
     if found is not None:
         return found
@@ -160,9 +160,34 @@ def services(region):
             priority = p.get("display_priorities", {}).get(region, p.get("display_priority", 999))
             name = p.get("provider_name", "")
             if name and (name not in ranked or priority < ranked[name][0]):
-                ranked[name] = (priority, p.get("logo_path") or "")
-    found = [{"name": name, "logo": logo} for name, (_, logo) in sorted(ranked.items(), key=lambda i: (i[1][0], i[0]))]
+                ranked[name] = (priority, p.get("logo_path") or "", p.get("provider_id"))
+    found = [{"name": name, "logo": logo, "id": provider_id}
+             for name, (_, logo, provider_id) in sorted(ranked.items(), key=lambda i: (i[1][0], i[0]))]
     cache.set(cache_key, found, 24 * 60 * 60)
+    return found
+
+
+def similar(kind, tmdb_id):
+    """Titles TMDB recommends to people who liked this one."""
+    cache_key = f"tmdb:similar:{settings.TMDB_LANGUAGE}:{kind}:{tmdb_id}"
+    found = cache.get(cache_key)
+    if found is None:
+        data = _get(f"/{TMDB_KINDS[kind]}/{tmdb_id}/recommendations")
+        found = [r for r in (_result(item, kind) for item in data.get("results", [])) if r and r["title"]]
+        cache.set(cache_key, found, 24 * 60 * 60)
+    return found
+
+
+def popular_on(kind, region, provider_id):
+    """What's popular on one streaming service in a country, as part of the subscription."""
+    cache_key = f"tmdb:popular:{settings.TMDB_LANGUAGE}:{kind}:{region}:{provider_id}"
+    found = cache.get(cache_key)
+    if found is None:
+        data = _get(f"/discover/{TMDB_KINDS[kind]}", watch_region=region, with_watch_providers=provider_id,
+                    with_watch_monetization_types="flatrate|free|ads", sort_by="popularity.desc",
+                    include_adult="false")
+        found = [r for r in (_result(item, kind) for item in data.get("results", [])) if r and r["title"]]
+        cache.set(cache_key, found, 24 * 60 * 60)
     return found
 
 

@@ -8,7 +8,7 @@
   </div>
 
   {% if running %}
-    <div class="card working" id="import-running" data-status-url="{% url 'lists:import_status' running.pk %}">
+    <div class="card working" id="import-running" data-poll-url="{% url 'lists:import_status' running.pk %}" data-poll-hash="pending">
       <span class="spinner" aria-hidden="true"></span>
       {% if running.purpose == 'link' %}
         <div><b>Updating your titles…</b><div class="muted small">Titles it isn't sure about will appear here for you to check. You can leave this page.</div></div>

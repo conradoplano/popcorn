@@ -246,6 +246,7 @@ class AIUsage(models.Model):
 
     class Kind(models.TextChoices):
         IMPORT = "import", "Import"
+        RECOMMEND = "recommend", "Recommendations"
 
     user = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="ai_usage")
     kind = models.CharField(max_length=10, choices=Kind.choices)
@@ -262,3 +263,62 @@ class AIUsage(models.Model):
 
     def __str__(self):
         return f"{self.get_kind_display()} for {self.user}: ${self.cost}"
+
+
+class RecommendationSet(models.Model):
+    """One day's recommendations for someone, made by AI from their lists, groups and services.
+    fingerprint: their lists when it was made; a new day only brings new ones when it changed."""
+
+    class Status(models.TextChoices):
+        RUNNING = "running", "Choosing"
+        DONE = "done", "Done"
+        FAILED = "failed", "Failed"
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="recommendation_sets")
+    status = models.CharField(max_length=10, choices=Status.choices, default=Status.RUNNING)
+    fingerprint = models.CharField(max_length=64, blank=True)
+    # Asked for with the "New recommendations" button, rather than the day's own.
+    requested = models.BooleanField(default=False)
+    message = models.TextField(blank=True)
+    created_at = models.DateTimeField(default=timezone.now, db_index=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"Recommendations for {self.user} on {self.created_at:%Y-%m-%d %H:%M}"
+
+
+class Recommendation(models.Model):
+    """A movie or show recommended to someone: added to a list, turned down, or still open."""
+
+    class State(models.TextChoices):
+        OPEN = "open", "Open"
+        ADDED = "added", "Added"
+        DISMISSED = "dismissed", "Not for me"
+
+    batch = models.ForeignKey(RecommendationSet, on_delete=models.CASCADE, related_name="items")
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="recommendations")
+    kind = models.CharField(max_length=10, choices=Entry.Kind.choices)
+    tmdb_id = models.PositiveIntegerField(null=True, blank=True)
+    title = models.CharField(max_length=200)
+    year = models.PositiveSmallIntegerField(null=True, blank=True)
+    poster_path = models.CharField(max_length=100, blank=True)
+    overview = models.TextField(blank=True)
+    reason = models.CharField(max_length=300, blank=True)
+    # The group it suits, one of its owner's.
+    tag = models.ForeignKey(Tag, null=True, blank=True, on_delete=models.SET_NULL, related_name="+")
+    providers = models.JSONField(default=list, blank=True)
+    state = models.CharField(max_length=10, choices=State.choices, default=State.OPEN)
+    position = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["position", "pk"]
+
+    def __str__(self):
+        return f"{self.title} ({self.year})" if self.year else self.title
+
+    @property
+    def poster_url(self):
+        return poster_url(self.poster_path)

@@ -324,14 +324,14 @@
     menu.hidden = true;
   });
 
-  // --- An import being read: wait for it, then show what it found. ---
-  const importing = document.querySelector('#import-running[data-status-url]');
-  if (importing) {
+  // --- An import being read (or recommendations chosen): wait for it, then show what it found. ---
+  // Also used while recommendations are chosen: <div data-poll-url data-poll-hash="where to go after">.
+  document.querySelectorAll('[data-poll-url]').forEach((waiting) => {
     const poll = async () => {
       try {
-        const response = await fetch(importing.dataset.statusUrl, { headers: fetchHeaders });
+        const response = await fetch(waiting.dataset.pollUrl, { headers: fetchHeaders });
         if ((await response.json()).finished) {
-          location.hash = 'pending';
+          if (waiting.dataset.pollHash) location.hash = waiting.dataset.pollHash;
           location.reload();
           return;
         }
@@ -339,7 +339,7 @@
       setTimeout(poll, 2500);
     };
     setTimeout(poll, 2500);
-  }
+  });
 
   // --- "Show all": <button data-show-more=".selector"> reveals the elements hidden with class "more". ---
   document.querySelectorAll('[data-show-more]').forEach((button) => button.addEventListener('click', () => {

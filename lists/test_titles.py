@@ -56,6 +56,17 @@ def fake_get(path, **params):
         found = SEARCH.get(params["query"].lower(), [])
         wanted = {"/search/movie": "movie", "/search/tv": "tv"}.get(path)
         return {"results": [r for r in found if wanted in (None, r["media_type"])]}
+    if path.endswith("/recommendations") or path.startswith("/discover/"):
+        # Similar titles, or what's popular on a service: every known title of that kind but the one asked about.
+        kind = "tv" if path.startswith(("/tv/", "/discover/tv")) else "movie"
+        exclude = int(path.split("/")[2]) if path.endswith("/recommendations") else None
+        seen, results = set(), []
+        for found in SEARCH.values():
+            for r in found:
+                if r["media_type"] == kind and r["id"] != exclude and r["id"] not in seen:
+                    seen.add(r["id"])
+                    results.append({k: v for k, v in r.items() if k != "media_type"})
+        return {"results": results}
     if path.startswith(("/movie/", "/tv/")):
         kind, tmdb_id = path.strip("/").split("/")
         item = next(r for results in SEARCH.values() for r in results
@@ -76,8 +87,8 @@ def fake_get(path, **params):
         return {"results": [{"iso_3166_1": "DE", "english_name": "Germany"}, {"iso_3166_1": "US", "english_name": "United States"}]}
     if path.startswith("/watch/providers/"):
         return {"results": [
-            {"provider_name": "Netflix", "logo_path": "/nf.jpg", "display_priorities": {"DE": 1}},
-            {"provider_name": "Disney Plus", "logo_path": "/dp.jpg", "display_priorities": {"DE": 2}},
+            {"provider_id": 8, "provider_name": "Netflix", "logo_path": "/nf.jpg", "display_priorities": {"DE": 1}},
+            {"provider_id": 337, "provider_name": "Disney Plus", "logo_path": "/dp.jpg", "display_priorities": {"DE": 2}},
         ]}
     raise AssertionError(f"unexpected TMDB call {path}")
 

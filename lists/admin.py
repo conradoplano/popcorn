@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import AIUsage, Entry, Import, PendingItem, Tag
+from .models import AIUsage, Entry, Import, PendingItem, Recommendation, RecommendationSet, Tag
 
 
 @admin.register(Entry)
@@ -33,6 +33,22 @@ class ImportAdmin(admin.ModelAdmin):
     list_filter = ("status", "used_ai")
     readonly_fields = [f.name for f in Import._meta.fields]
     inlines = [PendingItemInline]
+
+
+class RecommendationInline(admin.TabularInline):
+    model = Recommendation
+    fields = ("kind", "title", "year", "tmdb_id", "tag", "reason", "state")
+    readonly_fields = fields
+    extra = 0
+    can_delete = False
+
+
+@admin.register(RecommendationSet)
+class RecommendationSetAdmin(admin.ModelAdmin):
+    list_display = ("created_at", "user", "status", "requested")
+    list_filter = ("status", "requested")
+    readonly_fields = [f.name for f in RecommendationSet._meta.fields]
+    inlines = [RecommendationInline]
 
 
 @admin.register(AIUsage)

@@ -13,6 +13,13 @@ The name is set with `SITE_NAME`, so renaming the app only takes one environment
   **new from your friends**: per friend, the titles they added or watched since your last visit (opening the
   app after more than an hour away), with **+ My list** on each. Below, how many movies and shows you want to
   watch and the shows you're watching.
+  - **Recommended for you**: 5 movies and 5 TV shows a day, each with why, where it streams and the group it
+    suits. **+ To watch** or **✓ Seen it** adds it (in that group); **Not for me** hides it for good.
+    Candidates come from TMDB (similar to what you liked or want to watch, popular on your services); AI
+    picks from them knowing your lists, ratings, groups and services, and the ones on your services come
+    first. A new set is made the first time you open the app on a day, only if your lists, groups or services
+    changed since the last one. **↻ New recommendations** makes one any time. AI approval and the daily AI
+    limits apply to both (see TMDB and AI).
 - **🎬 Movies** and **📺 TV shows**: one list each. Filter by *Want to watch*, *Watching* (shows only),
   *Watched* or *All*, and search as you type. Add a title at the top: typing searches TMDB, and picking a
   result adds it with its poster, genres and where to stream it (or press Enter to add it as typed). It goes
@@ -99,3 +106,5 @@ docker compose up -d --build
 - Health check: `GET /health/`.
 - Every push to `main` runs the tests and publishes `ghcr.io/<owner>/<repo>:latest`
   (`.github/workflows/docker.yml`), as for Chef. On the NAS, serve it behind DSM's reverse proxy on port 5062.
+- On the Synology NAS: Container Manager → Project → Create, with `deploy/docker-compose.nas.yml` (fill in its
+  values there). To update, rebuild the project: it pulls the newest image and migrates on start.

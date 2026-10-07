@@ -16,6 +16,74 @@
     </a>
   {% endif %}
 
+  <section class="home-section" id="recommended">
+    <div class="line">
+      <h3>Recommended for you</h3>
+      {% if not rec_blocked and not rec_running %}
+        <form method="post" action="{% url 'lists:recommendations_new' %}" class="inline">
+          {% csrf_token %}<button type="submit" class="link small">↻ New recommendations</button>
+        </form>
+      {% endif %}
+    </div>
+    {% if rec_running %}
+      <div class="card working" data-poll-url="{% url 'lists:recommendations_status' rec_running.pk %}" data-poll-hash="recommended">
+        <span class="spinner" aria-hidden="true"></span>
+        <div><b>Choosing for you…</b><div class="muted small">From your lists, groups and streaming services. It takes a moment.</div></div>
+      </div>
+    {% elif rec_failed %}
+      <p class="flash error small">The last recommendations didn't work: {{ rec_failed.message }}</p>
+    {% endif %}
+    {% if rec_movies or rec_shows %}
+      {% for kind_label, recs in rec_lists %}
+        {% if recs %}
+          <div class="rec-kind muted small">{{ kind_label }}</div>
+          <div class="tiles recs">
+            {% for rec in recs %}
+              <div class="card rec">
+                {% if rec.poster_url %}
+                  <img class="tile-poster" src="{{ rec.poster_url }}" alt="" loading="lazy" width="92" height="138">
+                {% else %}
+                  <div class="tile-poster none" aria-hidden="true">{% if rec.kind == 'movie' %}🎬{% else %}📺{% endif %}</div>
+                {% endif %}
+                <div class="rec-text">
+                  <div class="tile-title" title="{{ rec }}">{{ rec.title }}{% if rec.year %} <span class="muted">{{ rec.year }}</span>{% endif %}</div>
+                  {% if rec.reason %}<div class="rec-reason small" title="{{ rec.overview }}">{{ rec.reason }}</div>{% endif %}
+                  {% if rec.providers or rec.tag %}
+                    <div class="chips">
+                      {% for p in rec.providers|slice:":4" %}{% include "lists/_provider.html" %}{% endfor %}
+                      {% if rec.tag %}<span class="chip tag">{{ rec.tag }}</span>{% endif %}
+                    </div>
+                  {% endif %}
+                  <div class="rec-actions">
+                    <form method="post" action="{% url 'lists:recommendation_add' rec.pk %}" class="inline">
+                      {% csrf_token %}
+                      <button type="submit" name="status" value="want" class="btn small">+ To watch</button>
+                      <button type="submit" name="status" value="watched" class="btn small ghost">✓ Seen it</button>
+                    </form>
+                    <form method="post" action="{% url 'lists:recommendation_dismiss' rec.pk %}" class="inline">
+                      {% csrf_token %}<button type="submit" class="link small muted-link" title="Not for me: it won't be recommended again">Not for me</button>
+                    </form>
+                  </div>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+      {% endfor %}
+      <p class="muted small">Chosen {{ rec_set.created_at|timesince }} ago from your lists, groups and services. New ones come the next day you open {{ site_name }} after your lists change.</p>
+    {% elif not rec_running %}
+      <div class="card empty center">
+        {% if rec_blocked %}
+          <p class="muted">{{ rec_blocked }}</p>
+        {% elif rec_set %}
+          <p>You've gone through today's recommendations.</p>
+        {% else %}
+          <p>Add a few movies or shows you liked, and recommendations for you will appear here.</p>
+        {% endif %}
+      </div>
+    {% endif %}
+  </section>
+
   <section class="home-section">
     <h3>New from your friends</h3>
     {% if not has_friends %}

@@ -13,9 +13,9 @@ from django.views.decorators.http import require_POST
 from friends import activity
 from friends.models import Friendship, can_see, incoming_requests
 
-from . import lookup, tmdb
+from . import lookup, recommender, tmdb
 from .forms import AddEntryForm, EntryForm
-from .models import Entry, Tag, poster_url
+from .models import Entry, Recommendation, RecommendationSet, Tag, poster_url
 
 KIND_PAGES = {Entry.Kind.MOVIE: "lists:movies", Entry.Kind.SHOW: "lists:shows"}
 SHOW_ALL = "all"
@@ -133,6 +133,7 @@ def home(request):
     and what you're in the middle of."""
     me = request.user
     since = activity.visit(me)
+    recommender.daily(me)
     has_friends = Friendship.objects.filter(user=me).exists()
     watching = list(me.entries.filter(status=Entry.Status.WATCHING).order_by("-added_at")[:12])
     to_watch = dict(me.entries.filter(status=Entry.Status.WANT).values_list("kind").annotate(n=Count("id")).order_by())
@@ -146,7 +147,51 @@ def home(request):
         "to_watch_shows": to_watch.get(Entry.Kind.SHOW, 0),
         "recent": [] if watching else list(me.entries.filter(status=Entry.Status.WANT).order_by("-added_at")[:12]),
         "services": {s.lower() for s in me.all_services},
+        **recommender.for_home(me),
     })
+
+
+@login_required
+@require_POST
+def recommendation_add(request, pk):
+    """Puts a recommendation on your list: to watch, or as watched ("Seen it"), in the group it suits."""
+    rec = get_object_or_404(Recommendation, pk=pk, user=request.user)
+    status = request.POST.get("status")
+    if status not in (Entry.Status.WANT, Entry.Status.WATCHED):
+        raise Http404("No status")
+    entry = add(request, rec.kind, status, rec.title, rec.year, rec.tmdb_id)
+    if rec.tag_id:
+        entry.tags.add(rec.tag_id)
+    rec.state = Recommendation.State.ADDED
+    rec.save(update_fields=["state"])
+    return redirect(reverse("lists:home") + "#recommended")
+
+
+@login_required
+@require_POST
+def recommendation_dismiss(request, pk):
+    """Not for me: it goes, and won't be recommended again."""
+    rec = get_object_or_404(Recommendation, pk=pk, user=request.user)
+    rec.state = Recommendation.State.DISMISSED
+    rec.save(update_fields=["state"])
+    return redirect(reverse("lists:home") + "#recommended")
+
+
+@login_required
+@require_POST
+def recommendations_new(request):
+    """The "New recommendations" button. The AI's approval and daily limits apply."""
+    _, reason = recommender.request_new(request.user)
+    if reason:
+        messages.error(request, reason)
+    return redirect(reverse("lists:home") + "#recommended")
+
+
+@login_required
+def recommendations_status(request, pk):
+    """Polled while recommendations are being chosen."""
+    batch = get_object_or_404(RecommendationSet, pk=pk, user=request.user)
+    return JsonResponse({"status": batch.status, "finished": batch.status != RecommendationSet.Status.RUNNING})
 
 
 @login_required

@@ -1,0 +1,55 @@
+# Compose file for the Synology NAS (Container Manager → Project → Create →
+# "Create docker-compose.yml" and paste this). Fill in the values below;
+# they only live on the NAS, never in git.
+#
+# Image built by .github/workflows/docker.yml on every push to main.
+services:
+  popcorn:
+    image: ghcr.io/conradoplano/popcorn:latest
+    # Always fetch the newest image when the project is built/started.
+    pull_policy: always
+    container_name: popcorn
+    restart: unless-stopped
+    ports:
+      # Only reachable from the NAS itself; DSM's reverse proxy serves it over HTTPS.
+      - "127.0.0.1:5062:8000"
+    volumes:
+      # Database. Relative to the project folder, e.g. /docker/popcorn/data. Back this up.
+      # Synology doesn't create missing folders: create "data" in File Station first.
+      - ./data:/data
+    environment:
+      # python -c "import secrets; print(secrets.token_urlsafe(50))"
+      SECRET_KEY: "change-me"
+      DEBUG: "false"
+      ALLOWED_HOSTS: "popcorn.example.com,localhost,127.0.0.1"
+      CSRF_TRUSTED_ORIGINS: "https://popcorn.example.com"
+      BEHIND_PROXY: "true"
+      SECURE_COOKIES: "true"
+      TIME_ZONE: "Europe/Berlin"
+      SITE_NAME: "Popcorn"
+      # Created/updated as admin on every start (optional)
+      INITIAL_ADMIN_EMAIL: ""
+      # SMTP for login codes and friend requests
+      EMAIL_HOST: "smtp.example.com"
+      EMAIL_PORT: "587"
+      EMAIL_HOST_USER: ""
+      EMAIL_HOST_PASSWORD: ""
+      EMAIL_USE_TLS: "true"
+      DEFAULT_FROM_EMAIL: "Popcorn <popcorn@example.com>"
+      LOGIN_CODE_MAX_AGE: "600"
+      # TMDB (themoviedb.org/settings/api): search, posters, genres, where to watch; empty: titles as typed
+      TMDB_API_KEY: ""
+      TMDB_LANGUAGE: "en-US"
+      # Default country for where to watch (everyone can pick their own)
+      WATCH_REGION: "DE"
+      # AI for imports (platform.openai.com/api-keys); empty switches it off
+      OPENAI_API_KEY: ""
+      AI_MODEL: "gpt-5.4-mini"
+      AI_EFFORT: "low"
+      # What AI may cost per day in USD: per person (changeable per person on the admin page) and in total
+      AI_DAILY_LIMIT_USD: "0.10"
+      AI_GLOBAL_DAILY_LIMIT_USD: "1.00"
+      # Anyone can register; "false": only with adduser
+      REGISTRATION_OPEN: "true"
+      # Address of the app for links in emails (default: the first CSRF_TRUSTED_ORIGINS entry)
+      SITE_URL: ""
